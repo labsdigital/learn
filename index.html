@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZETTA-Quiz AI (Storage Mode)</title>
+    
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class", // Mengaktifkan mode gelap/terang via class 'dark'
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2b7cee",
+                        "secondary": "#9370DB",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101822",
+                        "text-light-primary": "#333333",
+                        "text-light-secondary": "#888888",
+                        "text-dark-primary": "#F5F5F7",
+                        "text-dark-secondary": "#9EADBF",
+                        "card-light": "#FFFFFF",
+                        "card-dark": "#192433",
+                        "feedback-correct": "#28a745",
+                        "feedback-incorrect": "#dc3545",
+                        "success": "#7ED321",
+                        "error": "#D0021B"
+                    },
+                    fontFamily: { "display": ["Lexend", "sans-serif"] },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+
+    <style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        body { min-height: max(884px, 100dvh); -webkit-tap-highlight-color: transparent; }
+        .screen { display: none; flex-direction: column; width: 100%; min-height: 100dvh; }
+        .screen.active { display: flex; }
+        .spinner {
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 5px solid #fff;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #theme-toggle {
+            position: fixed; bottom: 6rem; right: 1.5rem; z-index: 100;
+            background-color: var(--tw-color-card-light); color: var(--tw-color-text-light-primary);
+            border-radius: 9999px; width: 50px; height: 50px; display: flex;
+            align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: all 0.2s ease-in-out;
+        }
+        .dark #theme-toggle { background-color: var(--tw-color-card-dark); color: var(--tw-color-text-dark-primary); }
+        .dark #theme-toggle .dark-icon { display: none; }
+        #theme-toggle .light-icon { display: none; }
+        .dark #theme-toggle .light-icon { display: inline; }
+        #theme-toggle .dark-icon { display: inline; }
+        .answer-option input[type="radio"] { display: none; }
+    </style>
+</head>
+
+<body class="font-display bg-background-light dark:bg-background-dark">
+
+    <div id="app-container" class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
+
+        <div id="home-screen" class="screen active">
+            <header class="flex items-center p-4 pb-2 justify-between bg-background-light dark:bg-background-dark sticky top-0 z-10">
+                <div class="flex size-12 shrink-0 items-center justify-start">
+                    <span class="material-symbols-outlined text-primary text-3xl">quiz</span>
+                </div>
+                <h1 class="text-text-light-primary dark:text-dark-primary text-xl font-bold leading-tight tracking-[-0.015em] flex-1 text-center">ZETTA-Quiz</h1>
+                <div class="flex w-12 items-center justify-end">
+                    <button aria-label="Profil Pengguna" class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-card-light dark:bg-card-dark text-text-light-primary dark:text-dark-primary">
+                        <span class="material-symbols-outlined text-2xl">person</span>
+                    </button>
+                </div>
+            </header>
+            
+            <main class="flex-grow">
+                <div class="px-4 pt-6">
+                    <h2 class="text-text-light-primary dark:text-dark-primary tracking-tight text-[32px] font-bold leading-tight text-left">Selamat Datang!</h2>
+                    <p class="text-text-light-secondary dark:text-dark-secondary text-base font-normal leading-normal pt-1">Siap untuk tantangan baru?</p>
+                </div>
+
+                <div class="p-4 @container">
+                    <div class="flex flex-col items-center justify-start rounded-xl shadow-md shadow-black/5 bg-card-light dark:bg-card-dark overflow-hidden">
+                        <div class="w-full h-36 bg-center bg-no-repeat bg-cover flex items-center justify-center bg-primary/10">
+                            <span class="material-symbols-outlined text-primary text-6xl">rocket_launch</span>
+                        </div>
+                        <div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-2 p-4">
+                            <p class="text-text-light-primary dark:text-dark-primary text-lg font-bold leading-tight tracking-[-0.015em]">Buat Kuis Baru</p>
+                            <div class="flex items-center gap-3 justify-between">
+                                <p class="text-text-light-secondary dark:text-dark-secondary text-base font-normal leading-normal flex-1">Buat kuis baru dengan AI.</p>
+                                <button id="start-new-quiz-btn" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-5 bg-primary text-white text-sm font-medium leading-normal shadow-sm">
+                                    <span class="truncate">Buat</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-4 pt-4">
+                    <h3 class="text-text-light-primary dark:text-dark-primary text-xl font-bold leading-tight mb-3">Kuis Tersimpan</h3>
+                    <div id="saved-quiz-list-container" class="flex flex-col gap-3">
+                        <p id="no-quiz-message" class="text-text-light-secondary dark:text-dark-secondary text-sm">Belum ada kuis yang disimpan. Buat kuis baru untuk memulai!</p>
+                    </div>
+                </div>
+            </main>
+
+            <div class="h-24"></div>
+
+            <nav class="fixed bottom-0 left-0 right-0 h-20 bg-card-light dark:bg-card-dark border-t border-black/10 dark:border-white/10 px-4 z-20">
+                <div class="flex justify-around items-center h-full max-w-md mx-auto">
+                    <button class="flex flex-col items-center justify-center gap-1 text-primary w-16">
+                        <span class="material-symbols-outlined">home</span>
+                        <span class="text-xs font-medium">Home</span>
+                    </button>
+                    </div>
+            </nav>
+        </div>
+
+        <div id="config-screen" class="screen">
+            <header class="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-background-light dark:bg-background-dark px-4 py-3">
+                <button id="config-back-btn" aria-label="Kembali" class="flex size-10 shrink-0 items-center justify-center text-slate-700 dark:text-white">
+                    <span class="material-symbols-outlined text-2xl">arrow_back</span>
+                </button>
+                <h1 class="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-white">Kuis Baru</h1>
+                <div class="size-10 shrink-0"></div> </header>
+
+            <main class="flex-grow pb-32">
+                <section class="px-4 pt-5">
+                    <h2 class="text-xl font-bold leading-tight tracking-[-0.015em] text-slate-800 dark:text-white pb-3">Topik Kuis</h2>
+                    <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#192330] p-4">
+                        <label for="quiz-topic" class="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Masukkan topik yang Anda inginkan:</label>
+                        <input id="quiz-topic" type="text" class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-background-light dark:bg-background-dark text-slate-900 dark:text-white" placeholder="Contoh: Sejarah Indonesia">
+                    </div>
+                </section>
+
+                <section class="px-4 pt-8">
+                    <div class="flex justify-between items-baseline pb-4">
+                        <h2 class="text-xl font-bold leading-tight tracking-[-0.015em] text-slate-800 dark:text-white">Jumlah Pertanyaan</h2>
+                        <span id="quiz-amount-label" class="font-semibold text-primary">10</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-sm font-medium text-slate-500 dark:text-slate-400">5</span>
+                        <input id="quiz-amount" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-primary" max="20" min="5" type="range" value="10">
+                        <span class="text-sm font-medium text-slate-500 dark:text-slate-400">20</span>
+                    </div>
+                </section>
+
+                <section class="px-4 pt-8">
+                    <h2 class="text-xl font-bold leading-tight tracking-[-0.015em] text-slate-800 dark:text-white pb-3">Level Kesulitan</h2>
+                    <div id="difficulty-options" class="grid grid-cols-3 gap-3">
+                        <button data-value="Mudah" class="difficulty-btn flex h-12 w-full items-center justify-center rounded-lg border border-transparent bg-primary/20 px-4 text-sm font-bold text-primary transition-colors">Mudah</button>
+                        <button data-value="Sedang" class="difficulty-btn selected flex h-12 w-full items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#192330] px-4 text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">Sedang</button>
+                        <button data-value="Sulit" class="difficulty-btn flex h-12 w-full items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#192330] px-4 text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">Sulit</button>
+                    </div>
+                </section>
+            </main>
+
+            <footer class="fixed bottom-0 left-0 right-0 z-10 bg-background-light dark:bg-background-dark p-4 border-t border-slate-200 dark:border-slate-800">
+                <button id="generate-quiz-btn" class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-6 bg-primary text-white text-base font-bold leading-normal tracking-wide shadow-lg shadow-primary/30 hover:bg-primary/90">
+                    Buat Kuis
+                </button>
+            </footer>
+        </div>
+
+        <div id="quiz-screen" class="screen">
+            <header class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+                <div class="flex w-12 shrink-0 items-center">
+                    <button id="quiz-close-btn" aria-label="Tutup Kuis" class="flex items-center justify-center h-10 w-10 text-slate-800 dark:text-white">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <h1 id="quiz-title" class="text-slate-800 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Memuat...</h1>
+                <div class="flex w-12 items-center justify-end"></div>
+            </header>
+
+            <main class="flex flex-col flex-grow px-4">
+                <div class="flex flex-col gap-2 py-4">
+                    <div class="flex gap-6 justify-between items-center">
+                        <p id="question-progress-text" class="text-slate-600 dark:text-slate-300 text-base font-medium leading-normal">Pertanyaan 1 dari 10</p>
+                    </div>
+                    <div class="rounded-full bg-slate-200 dark:bg-slate-700 h-2">
+                        <div id="question-progress-bar" class="h-2 rounded-full bg-primary transition-all duration-300" style="width: 10%;"></div>
+                    </div>
+                </div>
+
+                <div class="flex-grow flex flex-col justify-center">
+                    <h2 id="question-text" class="text-slate-900 dark:text-white tracking-light text-[28px] font-bold leading-tight text-left py-5" aria-live="polite">
+                        Memuat pertanyaan...
+                    </h2>
+                    <div id="answer-options-container" class="flex flex-col gap-3">
+                        </div>
+                </div>
+            </main>
+
+            <footer class="sticky bottom-0 bg-background-light dark:bg-background-dark pt-2 pb-4">
+                <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-between">
+                    <button id="prev-question-btn" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white text-base font-bold leading-normal tracking-[0.015em] basis-1/3">
+                        <span class="truncate">Sebelumnya</span>
+                    </button>
+                    <button id="next-question-btn" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] flex-grow basis-1/2">
+                        <span class="truncate">Selanjutnya</span>
+                    </button>
+                </div>
+            </footer>
+        </div>
+
+        <div id="results-screen" class="screen">
+            <header class="flex items-center bg-background-light dark:bg-background-dark p-4 justify-between sticky top-0 z-10">
+                <div class="size-10 shrink-0"></div> <h1 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Hasil Kuis</h1>
+                <div class="size-10 shrink-0"></div> </header>
+
+            <main class="flex flex-col flex-1 px-4 py-6">
+                <h2 class="text-slate-900 dark:text-white tracking-light text-[32px] font-bold leading-tight px-4 text-center">Kerja Bagus!</h2>
+                <p id="results-title" class="text-slate-500 dark:text-slate-400 text-base font-normal leading-normal pb-8 pt-1 px-4 text-center">Sejarah Indonesia</p>
+                
+                <div class="relative flex items-center justify-center py-6">
+                    <svg class="transform -rotate-90" height="200" viewbox="0 0 120 120" width="200">
+                        <circle class="stroke-slate-200 dark:stroke-slate-700/50" cx="60" cy="60" fill="none" r="54" stroke-width="12"></circle>
+                        <circle id="score-circle-progress" class="stroke-success transition-all duration-1000" cx="60" cy="60" fill="none" r="54" stroke-dasharray="339.292" stroke-dashoffset="339.292" stroke-linecap="round" stroke-width="12"></circle>
+                    </svg>
+                    <div class="absolute flex flex-col items-center justify-center">
+                        <span id="score-percentage-text" class="text-slate-900 dark:text-white text-5xl font-bold tracking-tighter">0%</span>
+                        <span class="text-slate-500 dark:text-slate-400 text-sm font-medium">Skor</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4 py-8">
+                    <div class="flex min-w-[158px] flex-1 items-center gap-4 rounded-xl p-4 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80">
+                        <div class="flex items-center justify-center size-12 rounded-full bg-success/10">
+                            <span class="material-symbols-outlined text-success">check</span>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium leading-normal">Benar</p>
+                            <p id="correct-stats-text" class="text-slate-900 dark:text-white tracking-light text-xl font-bold leading-tight">0/0</p>
+                        </div>
+                    </div>
+                    <div class="flex min-w-[158px] flex-1 items-center gap-4 rounded-xl p-4 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80">
+                        <div class="flex items-center justify-center size-12 rounded-full bg-error/10">
+                            <span class="material-symbols-outlined text-error">close</span>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium leading-normal">Salah</p>
+                            <p id="incorrect-stats-text" class="text-slate-900 dark:text-white tracking-light text-xl font-bold leading-tight">0/0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-grow"></div>
+                <div class="flex flex-col gap-3 pt-6 pb-4">
+                    <button id="retake-quiz-btn" class="flex w-full items-center justify-center rounded-xl border border-primary/50 bg-transparent px-6 py-4 text-base font-bold text-primary transition-colors hover:bg-primary/10">Ulangi Kuis</button>
+                    <button id="results-home-btn" class="flex w-full items-center justify-center rounded-xl bg-primary px-6 py-4 text-base font-bold text-white shadow-sm transition-colors hover:bg-primary/90">Kembali ke Home</button>
+                </div>
+            </main>
+        </div>
+
+    </div> <button id="theme-toggle" aria-label="Toggle dark mode">
+        <span class="material-symbols-outlined dark-icon">dark_mode</span>
+        <span class="material-symbols-outlined light-icon">light_mode</span>
+    </button>
+    <div id="loading-overlay" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div class="spinner"></div>
+    </div>
+
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+
+            // --- Variabel State Aplikasi ---
+            let allQuizzes = []; // Menyimpan SEMUA kuis dari localStorage
+            let currentQuiz = null; // Objek kuis yang sedang dimainkan
+            let currentQuizData = []; // Array pertanyaan dari kuis yang dimainkan
+            let currentQuestionIndex = 0;
+            let userAnswers = [];
+            
+            // --- Konfigurasi ---
+            const API_URL = 'https://taraka.id/apigate/index.php';
+            const STORAGE_KEY = 'quizApp_quizzes';
+
+            // --- Referensi Elemen DOM ---
+            const screens = {
+                home: document.getElementById('home-screen'),
+                config: document.getElementById('config-screen'),
+                quiz: document.getElementById('quiz-screen'),
+                results: document.getElementById('results-screen')
+            };
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const themeToggle = document.getElementById('theme-toggle');
+            
+            // Elemen Layar Utama (Home)
+            const startNewQuizBtn = document.getElementById('start-new-quiz-btn');
+            const savedQuizListContainer = document.getElementById('saved-quiz-list-container');
+            const noQuizMessage = document.getElementById('no-quiz-message');
+
+            // Elemen Layar Konfigurasi (Config)
+            const configBackBtn = document.getElementById('config-back-btn');
+            const generateQuizBtn = document.getElementById('generate-quiz-btn');
+            const topicInput = document.getElementById('quiz-topic');
+            const amountSlider = document.getElementById('quiz-amount');
+            const amountLabel = document.getElementById('quiz-amount-label');
+            const difficultyOptions = document.getElementById('difficulty-options');
+
+            // Elemen Layar Kuis (Quiz)
+            const quizCloseBtn = document.getElementById('quiz-close-btn');
+            const quizTitle = document.getElementById('quiz-title');
+            const progressText = document.getElementById('question-progress-text');
+            const progressBar = document.getElementById('question-progress-bar');
+            const questionText = document.getElementById('question-text');
+            const answerOptionsContainer = document.getElementById('answer-options-container');
+            const prevQuestionBtn = document.getElementById('prev-question-btn');
+            const nextQuestionBtn = document.getElementById('next-question-btn');
+
+            // Elemen Layar Hasil (Results)
+            const resultsTitle = document.getElementById('results-title');
+            const scorePercentageText = document.getElementById('score-percentage-text');
+            const scoreCircle = document.getElementById('score-circle-progress');
+            const correctStatsText = document.getElementById('correct-stats-text');
+            const incorrectStatsText = document.getElementById('incorrect-stats-text');
+            const retakeQuizBtn = document.getElementById('retake-quiz-btn');
+            const resultsHomeBtn = document.getElementById('results-home-btn');
+            const CIRCLE_CIRCUMFERENCE = 339.292;
+
+
+            // --- Fungsi Utilitas ---
+            function showScreen(screenId) {
+                Object.values(screens).forEach(screen => screen.classList.remove('active'));
+                screens[screenId].classList.add('active');
+            }
+            function showLoader() { loadingOverlay.classList.remove('hidden'); }
+            function hideLoader() { loadingOverlay.classList.add('hidden'); }
+
+            // --- Logika Tema ---
+            function initTheme() {
+                if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }
+            function toggleTheme() {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.theme = isDark ? 'dark' : 'light';
+            }
+
+            // --- Logika Penyimpanan (LocalStorage) ---
+
+            /** Memuat semua kuis dari localStorage ke state `allQuizzes` */
+            function loadSavedQuizzes() {
+                const data = localStorage.getItem(STORAGE_KEY);
+                allQuizzes = data ? JSON.parse(data) : [];
+                console.log("Kuis dimuat:", allQuizzes);
+                renderSavedQuizzes();
+            }
+
+            /** Menyimpan state `allQuizzes` ke localStorage */
+            function saveQuizzes() {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(allQuizzes));
+            }
+
+            /** Merender daftar kuis di Halaman Utama */
+            function renderSavedQuizzes() {
+                savedQuizListContainer.innerHTML = ''; // Kosongkan daftar
+                if (allQuizzes.length === 0) {
+                    savedQuizListContainer.appendChild(noQuizMessage); // Tampilkan pesan 'kosong'
+                    return;
+                }
+
+                allQuizzes.forEach((quiz, index) => {
+                    const quizCard = document.createElement('div');
+                    quizCard.className = "flex items-stretch justify-between gap-4 rounded-xl bg-card-light dark:bg-card-dark p-4 shadow-md shadow-black/5";
+                    quizCard.innerHTML = `
+                        <div class="flex flex-[2_2_0px] flex-col justify-between gap-4">
+                            <div class="flex flex-col gap-1">
+                                <p class="text-text-light-primary dark:text-dark-primary text-base font-bold leading-tight">${quiz.topic}</p>
+                                <p class="text-text-light-secondary dark:text-dark-secondary text-sm font-normal leading-normal">
+                                    ${quiz.questions.length} Soal • ${quiz.difficulty}
+                                </p>
+                            </div>
+                            <button data-quiz-id="${quiz.id}" class="play-quiz-btn flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-primary text-white text-sm font-medium leading-normal w-fit">
+                                <span class="truncate">Mainkan</span>
+                            </button>
+                        </div>
+                        <div class="w-full flex-1 flex items-center justify-center rounded-lg bg-secondary/10">
+                            <span class="material-symbols-outlined text-secondary text-5xl">play_circle</span>
+                        </div>
+                    `;
+                    savedQuizListContainer.appendChild(quizCard);
+                });
+            }
+
+            /** Menghapus kuis (Contoh, bisa ditambahkan tombolnya) */
+            function deleteQuiz(quizId) {
+                allQuizzes = allQuizzes.filter(q => q.id !== quizId);
+                saveQuizzes();
+                renderSavedQuizzes();
+            }
+
+
+            // --- Logika Pembuatan Kuis (AI) ---
+
+            /** Mengambil data dari form konfigurasi dan memanggil API */
+            async function handleGenerateQuizClick() {
+                const topic = topicInput.value;
+                if (!topic || topic.trim() === "") {
+                    alert("Silakan masukkan topik kuis terlebih dahulu.");
+                    return;
+                }
+
+                const quizSettings = {
+                    topic: topic,
+                    amount: parseInt(amountSlider.value, 10),
+                    difficulty: difficultyOptions.querySelector('.selected').dataset.value
+                };
+
+                console.log("Membuat kuis dengan pengaturan:", quizSettings);
+                showLoader();
+
+                // Panggil API
+                await fetchQuizData(quizSettings);
+            }
+
+            /**
+             * Menghubungi API AI untuk membuat pertanyaan
+             * @param {object} settings - Pengaturan dari form (topic, amount, difficulty)
+             */
+            async function fetchQuizData(settings) {
+                const prompt = `Buatkan saya ${settings.amount} pertanyaan kuis pilihan ganda (4 opsi) tentang ${settings.topic} dengan tingkat kesulitan ${settings.difficulty}. Berikan jawaban yang benar untuk setiap pertanyaan. Format sebagai JSON array.`;
+                const system = "Anda adalah asisten pembuat kuis. Jawab HANYA dengan format JSON yang diminta. JSON harus berupa array dari objek, di mana setiap objek memiliki 'question' (string), 'options' (array string 4 opsi), dan 'answer' (string yang cocok dengan salah satu opsi).";
+
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt, system })
+                    });
+                    
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                    const responseText = await response.text();
+                    console.log("Respon Teks dari AI:", responseText);
+
+                    let parsedData = parseAIResponse(responseText);
+
+                    // Validasi data
+                    if (!Array.isArray(parsedData) || parsedData.length === 0 || !parsedData[0].question || !parsedData[0].options || !parsedData[0].answer) {
+                         throw new Error("Format JSON dari AI tidak valid atau tidak lengkap.");
+                    }
+
+                    // Buat objek kuis baru
+                    const newQuiz = {
+                        id: Date.now(), // ID unik
+                        topic: settings.topic,
+                        difficulty: settings.difficulty,
+                        questions: parsedData // Data soal dari AI
+                    };
+
+                    // Simpan ke state dan localStorage
+                    allQuizzes.push(newQuiz);
+                    saveQuizzes();
+                    
+                    alert('Kuis berhasil dibuat dan disimpan!');
+                    renderSavedQuizzes(); // Update UI di Halaman Utama
+                    showScreen('home'); // Kembali ke Halaman Utama
+
+                } catch (error) {
+                    console.error("Error mengambil data kuis:", error);
+                    alert(`Gagal membuat kuis: ${error.message}. Pastikan Anda terhubung ke internet dan API dapat diakses. Silakan coba lagi.`);
+                } finally {
+                    hideLoader();
+                }
+            }
+
+            /**
+             * Helper untuk mem-parsing respons AI yang mungkin terbungkus markdown
+             * @param {string} text - Respon mentah dari AI
+             */
+            function parseAIResponse(text) {
+                try {
+                    // Coba parse langsung
+                    return JSON.parse(text);
+                } catch (e) {
+                    // Jika gagal (misal ada markdown ```json ... ```), coba ekstrak
+                    const jsonMatch = text.match(/```json([\s\S]*?)```/);
+                    if (jsonMatch && jsonMatch[1]) {
+                        return JSON.parse(jsonMatch[1]);
+                    } else {
+                        // Jika masih gagal, lempar error
+                        throw new Error("Gagal mem-parsing JSON dari respons AI.");
+                    }
+                }
+            }
+
+
+            // --- Logika Menjalankan Kuis ---
+
+            /** * Dipanggil saat tombol 'Mainkan' di Halaman Utama diklik 
+             * @param {number} quizId - ID kuis yang akan dimainkan
+             */
+            function handlePlayQuizClick(quizId) {
+                const quizToPlay = allQuizzes.find(q => q.id === quizId);
+                if (!quizToPlay) {
+                    alert("Kuis tidak ditemukan!");
+                    return;
+                }
+                
+                // Set state kuis saat ini
+                currentQuiz = quizToPlay;
+                currentQuizData = quizToPlay.questions;
+                userAnswers = new Array(currentQuizData.length).fill(null);
+                
+                console.log("Memainkan kuis:", currentQuiz.topic);
+                startQuiz();
+            }
+
+            /** Mempersiapkan dan memulai layar kuis */
+            function startQuiz() {
+                currentQuestionIndex = 0;
+                quizTitle.textContent = currentQuiz.topic;
+                displayQuestion(currentQuestionIndex);
+                showScreen('quiz');
+            }
+
+            /** Menampilkan pertanyaan berdasarkan indeks */
+            function displayQuestion(index) {
+                const question = currentQuizData[index];
+                if (!question) return;
+
+                questionText.textContent = question.question;
+                const progressPercent = ((index + 1) / currentQuizData.length) * 100;
+                progressText.textContent = `Pertanyaan ${index + 1} dari ${currentQuizData.length}`;
+                progressBar.style.width = `${progressPercent}%`;
+                answerOptionsContainer.innerHTML = '';
+
+                question.options.forEach((option) => {
+                    const isChecked = (userAnswers[index] === option);
+                    const optionElement = document.createElement('label');
+                    optionElement.className = "answer-option flex items-center gap-4 rounded-lg border border-solid border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/50 dark:has-[:checked]:border-primary cursor-pointer transition-all";
+                    optionElement.innerHTML = `
+                        <input class="h-5 w-5 appearance-none rounded-full border-2 border-slate-300 dark:border-slate-600 bg-transparent checked:bg-primary checked:border-primary" 
+                               name="quiz_answer" type="radio" value="${option}" ${isChecked ? 'checked' : ''}>
+                        <p class="text-slate-800 dark:text-slate-100 text-base font-medium leading-normal">${option}</p>
+                    `;
+                    optionElement.querySelector('input').addEventListener('change', () => {
+                        userAnswers[currentQuestionIndex] = option;
+                    });
+                    answerOptionsContainer.appendChild(optionElement);
+                });
+
+                prevQuestionBtn.style.display = (index === 0) ? 'none' : 'flex';
+                nextQuestionBtn.textContent = (index === currentQuizData.length - 1) ? 'Selesai' : 'Selanjutnya';
+            }
+
+
+            // --- Logika Hasil Kuis ---
+
+            /** Menghitung skor akhir */
+            function calculateResults() {
+                let correctCount = 0;
+                userAnswers.forEach((answer, index) => {
+                    if (answer === currentQuizData[index].answer) {
+                        correctCount++;
+                    }
+                });
+                const totalQuestions = currentQuizData.length;
+                const score = (correctCount / totalQuestions) * 100;
+                displayResults(correctCount, totalQuestions, score);
+            }
+
+            /** Menampilkan layar hasil */
+            function displayResults(correctCount, totalQuestions, score) {
+                resultsTitle.textContent = currentQuiz.topic;
+                scorePercentageText.textContent = `${Math.round(score)}%`;
+                correctStatsText.textContent = `${correctCount}/${totalQuestions}`;
+                incorrectStatsText.textContent = `${totalQuestions - correctCount}/${totalQuestions}`;
+
+                const offset = CIRCLE_CIRCUMFERENCE * (1 - (score / 100));
+                setTimeout(() => { scoreCircle.style.strokeDashoffset = offset; }, 300);
+                scoreCircle.classList.toggle('stroke-error', score < 50);
+                scoreCircle.classList.toggle('stroke-success', score >= 50);
+                
+                showScreen('results');
+            }
+
+
+            // --- Inisialisasi dan Event Listeners ---
+
+            function init() {
+                // Inisialisasi Tema
+                initTheme();
+                themeToggle.addEventListener('click', toggleTheme);
+                
+                // Inisialisasi Kuis
+                loadSavedQuizzes();
+
+                // Navigasi Utama
+                startNewQuizBtn.addEventListener('click', () => showScreen('config'));
+                configBackBtn.addEventListener('click', () => showScreen('home'));
+
+                // Navigasi Layar Config
+                amountSlider.addEventListener('input', (e) => { amountLabel.textContent = e.target.value; });
+                difficultyOptions.addEventListener('click', (e) => {
+                    const button = e.target.closest('.difficulty-btn');
+                    if (!button) return;
+                    difficultyOptions.querySelectorAll('.difficulty-btn').forEach(btn => {
+                        btn.classList.remove('selected', 'bg-primary/20', 'text-primary', 'border-transparent');
+                        btn.classList.add('border-slate-200', 'dark:border-slate-700', 'bg-white', 'dark:bg-[#192330]', 'text-slate-700', 'dark:text-slate-300');
+                    });
+                    button.classList.add('selected', 'bg-primary/20', 'text-primary', 'border-transparent');
+                    button.classList.remove('border-slate-200', 'dark:border-slate-700', 'bg-white', 'dark:bg-[#192330]', 'text-slate-700', 'dark:text-slate-300');
+                });
+                generateQuizBtn.addEventListener('click', handleGenerateQuizClick);
+
+                // Navigasi Layar Utama (Event Delegation untuk daftar kuis)
+                savedQuizListContainer.addEventListener('click', (e) => {
+                    const playButton = e.target.closest('.play-quiz-btn');
+                    if (playButton) {
+                        const quizId = parseInt(playButton.dataset.quizId, 10);
+                        handlePlayQuizClick(quizId);
+                    }
+                });
+
+                // Navigasi Layar Kuis
+                quizCloseBtn.addEventListener('click', () => {
+                    if (confirm('Apakah Anda yakin ingin keluar? Kemajuan kuis ini tidak akan disimpan.')) {
+                        showScreen('home');
+                    }
+                });
+                nextQuestionBtn.addEventListener('click', () => {
+                    if (currentQuestionIndex < currentQuizData.length - 1) {
+                        currentQuestionIndex++;
+                        displayQuestion(currentQuestionIndex);
+                    } else {
+                        calculateResults();
+                    }
+                });
+                prevQuestionBtn.addEventListener('click', () => {
+                    if (currentQuestionIndex > 0) {
+                        currentQuestionIndex--;
+                        displayQuestion(currentQuestionIndex);
+                    }
+                });
+
+                // Navigasi Layar Hasil
+                retakeQuizBtn.addEventListener('click', startQuiz); // Ulangi kuis yang sama
+                resultsHomeBtn.addEventListener('click', () => showScreen('home'));
+
+                // Tampilkan layar awal
+                showScreen('home');
+            }
+
+            // Jalankan aplikasi
+            init();
+
+        }); // End DOMContentLoaded
+    </script>
+</body>
+</html>
