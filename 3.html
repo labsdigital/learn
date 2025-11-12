@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Learning</title>
+    
+    <!-- Memuat Tailwind CSS dari CDN -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
+    <!-- Memuat Font (Lexend) dan Ikon (Material Symbols) -->
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+
+    <!-- Konfigurasi Tailwind (Warna, Font, dll.) -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class", // Mengaktifkan mode gelap/terang via class 'dark'
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2b7cee",
+                        "secondary": "#9370DB",
+                        
+                        // --- PALET WARNA BARU YANG LEBIH KONTRAST ---
+                        "background-light": "#f4f4f5",       // (Light) Main background - Zinc 100
+                        "background-dark": "#18181b",        // (Dark) Main background - Zinc 900
+                        "text-light-primary": "#777777",       // (Light) Main text - Zinc 900
+                        "text-light-secondary": "#71717a",     // (Light) Sub-text - Zinc 500
+                        "text-dark-primary": "#f4f4f5",        // (Dark) Main text - Zinc 100
+                        "text-dark-secondary": "#a1a1aa",     // (Dark) Sub-text - Zinc 400
+                        "card-light": "#bbbbbb",             // (Light) Card background - White
+                        "card-dark": "#27272a",              // (Dark) Card background - Zinc 800
+                        "border-light": "#e4e4e7",           // (Light) Border - Zinc 200
+                        "border-dark": "#3f3f46",            // (Dark) Border - Zinc 700
+                        // --- AKHIR PALET BARU ---
+
+                        "feedback-correct": "#28a745",
+                        "feedback-incorrect": "#dc3545",
+                        "success": "#7ED321",
+                        "error": "#D0021B"
+                    },
+                    fontFamily: { "display": ["Lexend", "sans-serif"] },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+
+    <!-- CSS Kustom (Embedded) -->
+    <style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        body { min-height: max(884px, 100dvh); -webkit-tap-highlight-color: transparent; }
+        .screen { display: none; flex-direction: column; width: 100%; min-height: 100dvh; }
+        .screen.active { display: flex; }
+        .spinner {
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 5px solid #fff;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- PERUBAHAN CSS --- */
+        /* Logika ikon toggle SEKARANG menargetkan tombol di dalam modal */
+        .dark #modal-theme-toggle .dark-icon { display: none; }
+        #modal-theme-toggle .light-icon { display: none; }
+        .dark #modal-theme-toggle .light-icon { display: inline; }
+        #modal-theme-toggle .dark-icon { display: inline; }
+        /* Tombol floating #theme-toggle lama telah dihapus */
+        
+        .answer-option input[type="radio"] { display: none; }
+
+        /* --- CSS Untuk Animasi Flashcard --- */
+        .perspective { perspective: 1000px; }
+        .transform-style-preserve-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .transform-rotate-y-180 { transform: rotateY(180deg); }
+        
+        #flashcard-inner {
+            transition: transform 0.6s;
+        }
+        #flashcard-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+        #flashcard-back {
+            overflow-y: auto;
+        }
+
+        /* --- CSS Untuk Navigasi Aktif --- */
+        .nav-btn.active {
+            color: var(--tw-color-primary);
+        }
+        .nav-btn:not(.active) {
+            color: var(--tw-color-text-light-secondary);
+        }
+        .dark .nav-btn:not(.active) {
+            color: var(--tw-color-text-dark-secondary);
+        }
+
+    </style>
+</head>
+
+<body class="font-display bg-background-light dark:bg-background-dark">
+
+    <!-- Kontainer utama aplikasi -->
+    <div id="app-container" class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
+
+        <!-- ============================================= -->
+        <!-- SCREEN 1: Halaman Utama (Home Screen)         -->
+        <!-- ============================================= -->
+        <div id="home-screen" class="screen active">
+            <!-- Top App Bar -->
+            <header class="flex items-center p-4 pb-2 justify-between bg-background-light dark:bg-background-dark sticky top-0 z-10">
+                <div class="flex size-12 shrink-0 items-center justify-start">
+                    <span class="material-symbols-outlined text-primary text-3xl">school</span>
+                </div>
+                <h1 class="text-text-light-primary dark:text-dark-primary text-xl font-bold leading-tight tracking-[-0.015em] flex-1 text-center">AI-Learning</h1>
+                <div class="flex w-12 items-center justify-end">
+                    <button aria-label="Profil Pengguna" class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-card-light dark:bg-card-dark text-text-light-primary dark:text-dark-primary">
+                        <span class="material-symbols-outlined text-2xl">person</span>
+                    </button>
+                </div>
+            </header>
+            
+            <main class="flex-grow">
+                <!-- Pesan Selamat Datang -->
+                <div class="px-4 pt-6">
+                    <h2 class="text-text-light-primary dark:text-dark-primary tracking-tight text-[32px] font-bold leading-tight text-left">Selamat Datang!</h2>
+                    <p class="text-text-light-secondary dark:text-dark-secondary text-base font-normal leading-normal pt-1">Siap untuk tantangan baru?</p>
+                </div>
+
+                <!-- Opsi Buat Materi (Grid) -->
+                <div class="grid grid-cols-2 gap-4 p-4">
+                    <!-- Kartu Buat Kuis Baru -->
+                    <div id="start-new-quiz-btn" class="flex cursor-pointer flex-col items-center justify-start rounded-xl shadow-md shadow-black/5 bg-card-light dark:bg-card-dark overflow-hidden">
+                        <div class="w-full h-32 bg-center bg-no-repeat bg-cover flex items-center justify-center bg-primary/10">
+                            <span class="material-symbols-outlined text-primary text-6xl">quiz</span>
+                        </div>
+                        <div class="flex w-full grow flex-col items-stretch justify-center p-4">
+                            <p class="text-text-light-primary dark:text-dark-primary text-lg font-bold leading-tight">Buat Kuis Baru</p>
+                        </div>
+                    </div>
+                    <!-- Kartu Buat Flashcard Baru -->
+                    <div id="start-new-flashcard-btn" class="flex cursor-pointer flex-col items-center justify-start rounded-xl shadow-md shadow-black/5 bg-card-light dark:bg-card-dark overflow-hidden">
+                        <div class="w-full h-32 bg-center bg-no-repeat bg-cover flex items-center justify-center bg-secondary/10">
+                            <span class="material-symbols-outlined text-secondary text-6xl">style</span>
+                        </div>
+                        <div class="flex w-full grow flex-col items-stretch justify-center p-4">
+                            <p class="text-text-light-primary dark:text-dark-primary text-lg font-bold leading-tight">Buat Flashcard</p>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Daftar Kuis Tersimpan -->
+                <div class="px-4 pt-4">
+                    <h3 class="text-text-light-primary dark:text-dark-primary text-xl font-bold leading-tight mb-3">Kuis Tersimpan</h3>
+                    <div id="saved-quiz-list-container" class="flex flex-col gap-3">
+                        <p id="no-quiz-message" class="text-text-light-secondary dark:text-dark-secondary text-sm">Belum ada kuis yang disimpan.</p>
+                    </div>
+                </div>
+
+                <!-- Daftar Flashcard Tersimpan -->
+                <div class="px-4 pt-6">
+                    <h3 class="text-text-light-primary dark:text-dark-primary text-xl font-bold leading-tight mb-3">Flashcard Tersimpan</h3>
+                    <div id="saved-flashcard-list-container" class="flex flex-col gap-3">
+                        <p id="no-flashcard-message" class="text-text-light-secondary dark:text-dark-secondary text-sm">Belum ada flashcard yang disimpan.</p>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Placeholder untuk Bottom Nav -->
+            <div class="h-24"></div>
+
+            <!-- Bottom Navigation Bar -->
+            <nav class="fixed bottom-0 left-0 right-0 h-20 bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark px-4 z-20">
+                <div class="flex justify-around items-center h-full max-w-md mx-auto">
+                    <!-- Tombol Home -->
+                    <button type="button" id="home-nav-btn" class="nav-btn flex flex-col items-center justify-center gap-1 w-16 active">
+                        <span class="material-symbols-outlined">home</span>
+                        <span class="text-xs font-medium">Home</span>
+                    </button>
+                    <!-- Tombol Dashboard (BARU) -->
+                    <button type="button" id="dashboard-nav-btn" class="nav-btn flex flex-col items-center justify-center gap-1 w-16">
+                        <span class="material-symbols-outlined">dashboard</span>
+                        <span class="text-xs font-medium">Dashboard</span>
+                    </button>
+                    <!-- Tombol Akun (BARU) -->
+                    <button type="button" id="account-nav-btn" class="nav-btn flex flex-col items-center justify-center gap-1 w-16">
+                        <span class="material-symbols-outlined">account_circle</span>
+                        <span class="text-xs font-medium">Akun</span>
+                    </button>
+                </div>
+            </nav>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- SCREEN 1.5: Halaman Dashboard (BARU)         -->
+        <!-- ============================================= -->
+        <div id="dashboard-screen" class="screen">
+            <!-- Top App Bar -->
+            <header class="sticky top-0 z-10 flex items-center justify-between border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 py-3">
+                <button id="dashboard-back-btn" aria-label="Kembali" class="flex size-10 shrink-0 items-center justify-center text-text-light-secondary dark:text-dark-secondary">
+                    <span class="material-symbols-outlined text-2xl">arrow_back</span>
+                </button>
+                <h1 class="text-text-light-primary dark:text-dark-primary text-xl font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Dashboard</h1>
+                <div class="size-10 shrink-0"></div> <!-- Spacer -->
+            </header>
+            
+            <main class="flex-grow">
+                <!-- Daftar Kuis Tersimpan -->
+                <div class="px-4 pt-6">
+                    <h3 class="text-text-light-primary dark:text-dark-primary text-xl font-bold leading-tight mb-3">Kuis Tersimpan</h3>
+                    <div id="dashboard-quiz-list-container" class="flex flex-col gap-3">
+                        <p id="dashboard-no-quiz-message" class="text-text-light-secondary dark:text-dark-secondary text-sm">Belum ada kuis yang disimpan.</p>
+                    </div>
+                </div>
+
+                <!-- Daftar Flashcard Tersimpan -->
+                <div class="px-4 pt-6">
+                    <h3 class="text-text-light-primary dark:text-dark-primary text-xl font-bold leading-tight mb-3">Flashcard Tersimpan</h3>
+                    <div id="dashboard-flashcard-list-container" class="flex flex-col gap-3">
+                        <p id="dashboard-no-flashcard-message" class="text-text-light-secondary dark:text-dark-secondary text-sm">Belum ada flashcard yang disimpan.</p>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Placeholder untuk Bottom Nav -->
+            <div class="h-24"></div>
+            <!-- Nav bar is shared, no need to repeat -->
+        </div>
+
+        <!-- ============================================= -->
+        <!-- SCREEN 2: Halaman Konfigurasi Kuis / Flashcard -->
+        <!-- ============================================= -->
+        <div id="config-screen" class="screen">
+            <!-- Top App Bar (Judul dinamis) -->
+            <header class="sticky top-0 z-10 flex items-center justify-between border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 py-3">
+                <button id="config-back-btn" aria-label="Kembali" class="flex size-10 shrink-0 items-center justify-center text-text-light-secondary dark:text-dark-secondary">
+                    <span class="material-symbols-outlined text-2xl">arrow_back</span>
+                </button>
+                <h1 id="config-title" class="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em] text-text-light-primary dark:text-dark-primary">Materi Baru</h1>
+                <div class="size-10 shrink-0"></div> <!-- Spacer -->
+            </header>
+
+            <!-- Konten Utama -->
+            <main class="flex-grow pb-32">
+                <!-- Bagian Topik -->
+                <section class="px-4 pt-5">
+                    <h2 class="text-xl font-bold leading-tight tracking-[-0.015em] text-text-light-primary dark:text-dark-primary pb-3">Topik Materi</h2>
+                    <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-4">
+                        <label for="quiz-topic" class="block text-sm font-medium text-text-light-secondary dark:text-dark-secondary mb-2">Masukkan topik yang Anda inginkan:</label>
+                        <input id="quiz-topic" type="text" class="w-full rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light-primary dark:text-dark-primary" placeholder="Contoh: Ibu Kota Negara Dunia">
+                    </div>
+                </section>
+
+                <!-- Bagian Jumlah Item -->
+                <section class="px-4 pt-8">
+                    <div class="flex justify-between items-baseline pb-4">
+                        <h2 id="config-amount-title" class="text-xl font-bold leading-tight tracking-[-0.015em] text-text-light-primary dark:text-dark-primary">Jumlah Item</h2>
+                        <span id="quiz-amount-label" class="font-semibold text-primary">10</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-sm font-medium text-text-light-secondary dark:text-dark-secondary">5</span>
+                        <input id="quiz-amount" class="w-full h-2 bg-border-light dark:bg-border-dark rounded-lg appearance-none cursor-pointer accent-primary" max="20" min="5" type="range" value="10">
+                        <span class="text-sm font-medium text-text-light-secondary dark:text-dark-secondary">20</span>
+                    </div>
+                </section>
+
+                <!-- Bagian Level Kesulitan -->
+                <section class="px-4 pt-8">
+                    <h2 class="text-xl font-bold leading-tight tracking-[-0.015em] text-text-light-primary dark:text-dark-primary pb-3">Level Kesulitan</h2>
+                    <div id="difficulty-options" class="grid grid-cols-3 gap-3">
+                        <button data-value="Mudah" class="difficulty-btn flex h-12 w-full items-center justify-center rounded-lg border border-transparent bg-primary/20 px-4 text-sm font-bold text-primary transition-colors">Mudah</button>
+                        <button data-value="Sedang" class="difficulty-btn selected flex h-12 w-full items-center justify-center rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-4 text-sm font-medium text-text-light-secondary dark:text-dark-secondary transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">Sedang</button>
+                        <button data-value="Sulit" class="difficulty-btn flex h-12 w-full items-center justify-center rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-4 text-sm font-medium text-text-light-secondary dark:text-dark-secondary transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">Sulit</button>
+                    </div>
+                </section>
+            </main>
+
+            <!-- Tombol Aksi Bawah (Footer) (Teks dinamis) -->
+            <footer class="fixed bottom-0 left-0 right-0 z-10 bg-background-light dark:bg-background-dark p-4 border-t border-border-light dark:border-border-dark">
+                <button id="generate-btn" class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-6 bg-primary text-white text-base font-bold leading-normal tracking-wide shadow-lg shadow-primary/30 hover:bg-primary/90">
+                    Buat
+                </button>
+            </footer>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- SCREEN 3: Halaman Kuis (Quiz Screen)          -->
+        <!-- ============================================= -->
+        <div id="quiz-screen" class="screen">
+            <!-- Top App Bar -->
+            <header class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+                <div class="flex w-12 shrink-0 items-center">
+                    <button id="quiz-close-btn" aria-label="Tutup Kuis" class="flex items-center justify-center h-10 w-10 text-text-light-secondary dark:text-dark-secondary">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <h1 id="quiz-title" class="text-text-light-primary dark:text-dark-primary text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Memuat...</h1>
+                <div class="flex w-12 items-center justify-end"></div>
+            </header>
+
+            <main class="flex flex-col flex-grow px-4">
+                <!-- Progress Bar -->
+                <div class="flex flex-col gap-2 py-4">
+                    <div class="flex gap-6 justify-between items-center">
+                        <p id="question-progress-text" class="text-text-light-secondary dark:text-dark-secondary text-base font-medium leading-normal">Pertanyaan 1 dari 10</p>
+                    </div>
+                    <div class="rounded-full bg-border-light dark:bg-border-dark h-2">
+                        <div id="question-progress-bar" class="h-2 rounded-full bg-primary transition-all duration-300" style="width: 10%;"></div>
+                    </div>
+                </div>
+
+                <!-- Konten Pertanyaan -->
+                <div class="flex-grow flex flex-col justify-center">
+                    <h2 id="question-text" class="text-text-light-primary dark:text-dark-primary tracking-light text-[28px] font-bold leading-tight text-left py-5" aria-live="polite">
+                        Memuat pertanyaan...
+                    </h2>
+                    <!-- Pilihan Jawaban (dimuat oleh JS) -->
+                    <div id="answer-options-container" class="flex flex-col gap-3">
+                        <!-- Pilihan jawaban akan dimasukkan di sini oleh JavaScript -->
+                    </div>
+                </div>
+            </main>
+
+            <!-- Tombol Navigasi Kuis -->
+            <footer class="sticky bottom-0 bg-background-light dark:bg-background-dark pt-2 pb-4">
+                <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-between">
+                    <button id="prev-question-btn" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-border-light dark:bg-border-dark text-text-light-primary dark:text-dark-primary text-base font-bold leading-normal tracking-[0.015em] basis-1/3">
+                        <span class="truncate">Sebelumnya</span>
+                    </button>
+                    <button id="next-question-btn" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] flex-grow basis-1/2">
+                        <span class="truncate">Selanjutnya</span>
+                    </button>
+                </div>
+            </footer>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- SCREEN 4: Halaman Hasil Kuis (Results Screen) -->
+        <!-- ============================================= -->
+        <div id="results-screen" class="screen">
+            <!-- Top App Bar -->
+            <header class="flex items-center bg-background-light dark:bg-background-dark p-4 justify-between sticky top-0 z-10">
+                <div class="size-10 shrink-0"></div> <!-- Spacer -->
+                <h1 class="text-text-light-primary dark:text-dark-primary text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Hasil Kuis</h1>
+                <div class="size-10 shrink-0"></div> <!-- Spacer -->
+            </header>
+
+            <main class="flex flex-col flex-1 px-4 py-6">
+                <h2 class="text-text-light-primary dark:text-dark-primary tracking-light text-[32px] font-bold leading-tight px-4 text-center">Kerja Bagus!</h2>
+                <p id="results-title" class="text-text-light-secondary dark:text-dark-secondary text-base font-normal leading-normal pb-8 pt-1 px-4 text-center">Sejarah Indonesia</p>
+                
+                <!-- Visualisasi Skor -->
+                <div class="relative flex items-center justify-center py-6">
+                    <svg class="transform -rotate-90" height="200" viewbox="0 0 120 120" width="200">
+                        <circle class="stroke-border-light dark:stroke-border-dark" cx="60" cy="60" fill="none" r="54" stroke-width="12"></circle>
+                        <circle id="score-circle-progress" class="stroke-success transition-all duration-1000" cx="60" cy="60" fill="none" r="54" stroke-dasharray="339.292" stroke-dashoffset="339.292" stroke-linecap="round" stroke-width="12"></circle>
+                    </svg>
+                    <div class="absolute flex flex-col items-center justify-center">
+                        <span id="score-percentage-text" class="text-text-light-primary dark:text-dark-primary text-5xl font-bold tracking-tighter">0%</span>
+                        <span class="text-text-light-secondary dark:text-dark-secondary text-sm font-medium">Skor</span>
+                    </div>
+                </div>
+
+                <!-- Statistik Detail -->
+                <div class="flex flex-col sm:flex-row gap-4 py-8">
+                    <div class="flex min-w-[158px] flex-1 items-center gap-4 rounded-xl p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark">
+                        <div class="flex items-center justify-center size-12 rounded-full bg-success/10">
+                            <span class="material-symbols-outlined text-success">check</span>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <p class="text-text-light-secondary dark:text-dark-secondary text-sm font-medium leading-normal">Benar</p>
+                            <p id="correct-stats-text" class="text-text-light-primary dark:text-dark-primary tracking-light text-xl font-bold leading-tight">0/0</p>
+                        </div>
+                    </div>
+                    <div class="flex min-w-[158px] flex-1 items-center gap-4 rounded-xl p-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark">
+                        <div class="flex items-center justify-center size-12 rounded-full bg-error/10">
+                            <span class="material-symbols-outlined text-error">close</span>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <p class="text-text-light-secondary dark:text-dark-secondary text-sm font-medium leading-normal">Salah</p>
+                            <p id="incorrect-stats-text" class="text-text-light-primary dark:text-dark-primary tracking-light text-xl font-bold leading-tight">0/0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-grow"></div>
+                <!-- Tombol Aksi -->
+                <div class="flex flex-col gap-3 pt-6 pb-4">
+                    <button id="retake-quiz-btn" class="flex w-full items-center justify-center rounded-xl border border-primary/50 bg-transparent px-6 py-4 text-base font-bold text-primary transition-colors hover:bg-primary/10">Ulangi Kuis</button>
+                    <button id="results-home-btn" class="flex w-full items-center justify-center rounded-xl bg-primary px-6 py-4 text-base font-bold text-white shadow-sm transition-colors hover:bg-primary/90">Kembali ke Home</button>
+                </div>
+            </main>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- SCREEN 5: Halaman Flashcard (Flashcard Screen) -->
+        <!-- ============================================= -->
+        <div id="flashcard-screen" class="screen">
+            <!-- Top App Bar -->
+            <header class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+                <div class="flex w-12 shrink-0 items-center">
+                    <button id="flashcard-close-btn" aria-label="Tutup Flashcards" class="flex items-center justify-center h-10 w-10 text-text-light-secondary dark:text-dark-secondary">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <h1 id="flashcard-title" class="text-text-light-primary dark:text-dark-primary text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Flashcards</h1>
+                <div class="flex w-12 items-center justify-end"></div>
+            </header>
+
+            <main class="flex flex-col flex-grow px-4">
+                <!-- Progress Text -->
+                <div class="flex justify-center items-center py-4">
+                    <p id="flashcard-progress-text" class="text-text-light-secondary dark:text-dark-secondary text-base font-medium leading-normal">Kartu 1 dari 10</p>
+                </div>
+
+                <!-- Konten Flashcard -->
+                <div class="flex-grow flex flex-col justify-center items-center p-4">
+                    <!-- Kontainer untuk perspektif 3D -->
+                    <div id="flashcard-container" class="w-full max-w-md h-80 perspective cursor-pointer">
+                        <!-- Kontainer dalam yang akan berputar -->
+                        <div id="flashcard-inner" class="relative w-full h-full transition-transform duration-500 transform-style-preserve-3d">
+                            <!-- Sisi Depan Kartu -->
+                            <div id="flashcard-front" class="absolute w-full h-full backface-hidden rounded-xl bg-card-light dark:bg-card-dark shadow-lg flex items-center justify-center p-6 border border-border-light dark:border-border-dark">
+                                <p id="flashcard-term" class="text-3xl font-bold text-center text-text-light-primary dark:text-dark-primary">Istilah</p>
+                            </div>
+                            <!-- Sisi Belakang Kartu -->
+                            <div id="flashcard-back" class="absolute w-full h-full backface-hidden rounded-xl bg-card-light dark:bg-card-dark shadow-lg flex items-center justify-center p-6 border border-border-light dark:border-border-dark transform-rotate-y-180">
+                                <p id="flashcard-definition" class="text-lg text-center text-text-light-primary dark:text-dark-primary">Definisi dari istilah akan muncul di sini.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-center text-text-light-secondary dark:text-dark-secondary text-sm mb-4">Klik kartu untuk membalik</p>
+            </main>
+
+            <!-- Tombol Navigasi Flashcard -->
+            <footer class="sticky bottom-0 bg-background-light dark:bg-background-dark pt-2 pb-4">
+                <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-between">
+                    <button id="prev-flashcard-btn" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-border-light dark:bg-border-dark text-text-light-primary dark:text-dark-primary text-base font-bold leading-normal tracking-[0.015em] basis-1/3">
+                        <span class="truncate">Sebelumnya</span>
+                    </button>
+                    <button id="next-flashcard-btn" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] flex-grow basis-1/2">
+                        <span class="truncate">Selanjutnya</span>
+                    </button>
+                </div>
+            </footer>
+        </div>
+
+
+    </div> <!-- End #app-container -->
+
+
+    <!-- ============================================= -->
+    <!-- Elemen Global (di luar layar)             -->
+    <!-- ============================================= -->
+    
+    <!-- MODAL PENGATURAN AKUN (BARU) -->
+    <div id="account-modal" class="hidden fixed inset-0 z-[9998] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <!-- Kartu Modal -->
+        <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-lg w-full max-w-sm p-6">
+            <!-- Header Modal -->
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-text-light-primary dark:text-dark-primary">Pengaturan</h2>
+                <button id="close-account-modal-btn" class="text-text-light-secondary dark:text-dark-secondary">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <!-- Konten Modal: Toggle Tema -->
+            <div class="flex justify-between items-center p-4 rounded-lg bg-background-light dark:bg-background-dark">
+                <span class="text-text-light-primary dark:text-dark-primary font-medium">Mode Gelap/Terang</span>
+                <!-- Ini adalah toggle switch yang baru -->
+                <button id="modal-theme-toggle" class="flex items-center justify-center h-10 w-10 rounded-full bg-card-light dark:bg-card-dark text-text-light-primary dark:text-dark-primary shadow">
+                    <span class="material-symbols-outlined dark-icon">dark_mode</span>
+                    <span class="material-symbols-outlined light-icon">light_mode</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tombol floating lama sudah DIHAPUS -->
+
+    <!-- Overlay Loading -->
+    <div id="loading-overlay" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div class="spinner"></div>
+    </div>
+
+
+    <!-- ============================================= -->
+    <!-- JavaScript Aplikasi (Embedded)                -->
+    <!-- ============================================= -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+
+            // --- Variabel State Aplikasi ---
+            let appData = { quizzes: [], flashcards: [] }; // Menyimpan SEMUA data
+            let globalState = {
+                currentMode: 'quiz', // 'quiz' atau 'flashcard'
+                currentQuiz: null,
+                currentFlashcardSet: null,
+                currentFlashcardIndex: 0
+            };
+            
+            // --- Konfigurasi ---
+            const API_URL = 'https://taraka.id/apigate/index.php';
+            const STORAGE_KEY = 'aiLearningApp_data_v2';
+            const CIRCLE_CIRCUMFERENCE = 339.292;
+
+            // --- Referensi Elemen DOM ---
+            const screens = {
+                home: document.getElementById('home-screen'),
+                dashboard: document.getElementById('dashboard-screen'), // BARU
+                config: document.getElementById('config-screen'),
+                quiz: document.getElementById('quiz-screen'),
+                results: document.getElementById('results-screen'),
+                flashcard: document.getElementById('flashcard-screen')
+            };
+            const loadingOverlay = document.getElementById('loading-overlay');
+            
+            // --- PERUBAHAN JS: Referensi Modal & Toggle ---
+            const accountModal = document.getElementById('account-modal');
+            const accountNavBtn = document.getElementById('account-nav-btn');
+            const closeAccountModalBtn = document.getElementById('close-account-modal-btn');
+            const modalThemeToggle = document.getElementById('modal-theme-toggle');
+            
+            // Tombol Navigasi Bawah (BARU)
+            const homeNavBtn = document.getElementById('home-nav-btn');
+            const dashboardNavBtn = document.getElementById('dashboard-nav-btn');
+            
+            // Layar Utama (Home)
+            const startNewQuizBtn = document.getElementById('start-new-quiz-btn');
+            const startNewFlashcardBtn = document.getElementById('start-new-flashcard-btn');
+            
+            // Konten Dashboard (BARU, menggantikan yang lama di Home)
+            const dashboardQuizListContainer = document.getElementById('dashboard-quiz-list-container');
+            const dashboardNoQuizMessage = document.getElementById('dashboard-no-quiz-message');
+            const dashboardFlashcardListContainer = document.getElementById('dashboard-flashcard-list-container');
+            const dashboardNoFlashcardMessage = document.getElementById('dashboard-no-flashcard-message');
+            const dashboardBackBtn = document.getElementById('dashboard-back-btn'); // <-- BARU
+
+            // Layar Konfigurasi (Config)
+            const configBackBtn = document.getElementById('config-back-btn');
+            const generateBtn = document.getElementById('generate-btn');
+            const configTitle = document.getElementById('config-title');
+            const configAmountTitle = document.getElementById('config-amount-title');
+            const topicInput = document.getElementById('quiz-topic');
+            const amountSlider = document.getElementById('quiz-amount');
+            const amountLabel = document.getElementById('quiz-amount-label');
+            const difficultyOptions = document.getElementById('difficulty-options');
+
+            // Layar Kuis (Quiz)
+            const quizCloseBtn = document.getElementById('quiz-close-btn');
+            const quizTitle = document.getElementById('quiz-title');
+            const progressText = document.getElementById('question-progress-text');
+            const progressBar = document.getElementById('question-progress-bar');
+            const questionText = document.getElementById('question-text');
+            const answerOptionsContainer = document.getElementById('answer-options-container');
+            const prevQuestionBtn = document.getElementById('prev-question-btn');
+            const nextQuestionBtn = document.getElementById('next-question-btn');
+
+            // Layar Hasil (Results)
+            const resultsTitle = document.getElementById('results-title');
+            const scorePercentageText = document.getElementById('score-percentage-text');
+            const scoreCircle = document.getElementById('score-circle-progress');
+            const correctStatsText = document.getElementById('correct-stats-text');
+            const incorrectStatsText = document.getElementById('incorrect-stats-text');
+            const retakeQuizBtn = document.getElementById('retake-quiz-btn');
+            const resultsHomeBtn = document.getElementById('results-home-btn');
+
+            // Layar Flashcard (Flashcard)
+            const flashcardScreen = document.getElementById('flashcard-screen');
+            const flashcardCloseBtn = document.getElementById('flashcard-close-btn');
+            const flashcardTitle = document.getElementById('flashcard-title');
+            const flashcardProgressText = document.getElementById('flashcard-progress-text');
+            const flashcardContainer = document.getElementById('flashcard-container');
+            const flashcardInner = document.getElementById('flashcard-inner');
+            const flashcardTerm = document.getElementById('flashcard-term');
+            const flashcardDefinition = document.getElementById('flashcard-definition');
+            const prevFlashcardBtn = document.getElementById('prev-flashcard-btn');
+            const nextFlashcardBtn = document.getElementById('next-flashcard-btn');
+
+
+            // --- Fungsi Utilitas ---
+            function showScreen(screenId) {
+                Object.values(screens).forEach(screen => screen.classList.remove('active'));
+                screens[screenId].classList.add('active');
+                
+                // Update state nav
+                if (screenId === 'home' || screenId === 'dashboard') {
+                    updateNavActiveState(screenId);
+                }
+                
+                // Refresh list saat dashboard ditampilkan
+                if (screenId === 'dashboard') {
+                    renderSavedQuizzes();
+                    renderSavedFlashcards();
+                }
+            }
+            function showLoader() { loadingOverlay.classList.remove('hidden'); }
+            function hideLoader() { loadingOverlay.classList.add('hidden'); }
+
+            // --- Fungsi Navigasi Bawah (BARU) ---
+            function updateNavActiveState(activeScreen) {
+                // Reset semua
+                [homeNavBtn, dashboardNavBtn, accountNavBtn].forEach(btn => {
+                    btn.classList.remove('active', 'text-primary');
+                });
+                // Set aktif
+                let activeBtn;
+                if (activeScreen === 'home') activeBtn = homeNavBtn;
+                if (activeScreen === 'dashboard') activeBtn = dashboardNavBtn;
+                if (activeScreen === 'akun') activeBtn = accountNavBtn;
+                
+                if(activeBtn) {
+                    activeBtn.classList.add('active', 'text-primary');
+                }
+            }
+
+            // --- Logika Tema ---
+            function initTheme() {
+                // Fungsi ini tidak berubah, CSS akan menangani ikon
+                if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }
+            function toggleTheme() {
+                // Fungsi ini tidak berubah, CSS akan menangani ikon
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.theme = isDark ? 'dark' : 'light';
+            }
+
+            // --- Logika Penyimpanan (LocalStorage) ---
+            function loadSavedData() {
+                const data = localStorage.getItem(STORAGE_KEY);
+                appData = data ? JSON.parse(data) : { quizzes: [], flashcards: [] };
+                if (!appData.quizzes) appData.quizzes = [];
+                if (!appData.flashcards) appData.flashcards = [];
+                
+                console.log("Data dimuat:", appData);
+                // Render list di dashboard, bukan di home
+                renderSavedQuizzes();
+                renderSavedFlashcards();
+            }
+
+            function saveData() {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+            }
+
+            // --- Render UI Home ---
+            function renderSavedQuizzes() {
+                // Target kontainer dashboard
+                const container = dashboardQuizListContainer;
+                const noMessage = dashboardNoQuizMessage;
+
+                container.innerHTML = '';
+                if (appData.quizzes.length === 0) {
+                    container.appendChild(noMessage);
+                    return;
+                }
+                appData.quizzes.forEach((quiz) => {
+                    const quizCard = document.createElement('div');
+                    quizCard.className = "flex items-center justify-between gap-3 rounded-xl bg-card-light dark:bg-card-dark p-4 shadow-md shadow-black/5";
+                    quizCard.innerHTML = `
+                        <div class="flex flex-col gap-1 flex-1 min-w-0">
+                            <p class="text-text-light-primary dark:text-dark-primary text-base font-bold leading-tight truncate">${quiz.topic}</p>
+                            <p class="text-text-light-secondary dark:text-dark-secondary text-sm font-normal leading-normal">
+                                ${quiz.questions.length} Soal • ${quiz.difficulty}
+                            </p>
+                        </div>
+                        <button data-quiz-id="${quiz.id}" class="play-quiz-btn flex-shrink-0 flex min-w-[84px] cursor-pointer items-center justify-center rounded-lg h-9 px-4 bg-primary text-white text-sm font-medium">
+                            Mainkan
+                        </button>
+                        <button data-quiz-id="${quiz.id}" class="delete-quiz-btn flex-shrink-0 flex items-center justify-center h-9 w-9 rounded-lg bg-error/10 text-error">
+                            <span class="material-symbols-outlined text-lg">delete</span>
+                        </button>
+                    `;
+                    container.appendChild(quizCard);
+                });
+            }
+
+            function renderSavedFlashcards() {
+                // Target kontainer dashboard
+                const container = dashboardFlashcardListContainer;
+                const noMessage = dashboardNoFlashcardMessage;
+
+                container.innerHTML = '';
+                if (appData.flashcards.length === 0) {
+                    container.appendChild(noMessage);
+                    return;
+                }
+                appData.flashcards.forEach((set) => {
+                    const card = document.createElement('div');
+                    card.className = "flex items-center justify-between gap-3 rounded-xl bg-card-light dark:bg-card-dark p-4 shadow-md shadow-black/5";
+                    card.innerHTML = `
+                        <div class="flex flex-col gap-1 flex-1 min-w-0">
+                            <p class="text-text-light-primary dark:text-dark-primary text-base font-bold leading-tight truncate">${set.topic}</p>
+                            <p class="text-text-light-secondary dark:text-dark-secondary text-sm font-normal leading-normal">
+                                ${set.cards.length} Kartu • ${set.difficulty}
+                            </p>
+                        </div>
+                        <button data-flashcard-id="${set.id}" class="play-flashcard-btn flex-shrink-0 flex min-w-[84px] cursor-pointer items-center justify-center rounded-lg h-9 px-4 bg-secondary text-white text-sm font-medium">
+                            Mainkan
+                        </button>
+                        <button data-flashcard-id="${set.id}" class="delete-flashcard-btn flex-shrink-0 flex items-center justify-center h-9 w-9 rounded-lg bg-error/10 text-error">
+                            <span class="material-symbols-outlined text-lg">delete</span>
+                        </button>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+
+            // --- Logika Pembuatan Materi (AI) ---
+
+            /** Menyiapkan layar config untuk Kuis */
+            function setupConfigForQuiz() {
+                globalState.currentMode = 'quiz';
+                configTitle.textContent = 'Kuis Baru';
+                configAmountTitle.textContent = 'Jumlah Pertanyaan';
+                generateBtn.textContent = 'Buat Kuis';
+                topicInput.value = '';
+                showScreen('config');
+            }
+
+            /** Menyiapkan layar config untuk Flashcard */
+            function setupConfigForFlashcard() {
+                globalState.currentMode = 'flashcard';
+                configTitle.textContent = 'Flashcard Baru';
+                configAmountTitle.textContent = 'Jumlah Kartu';
+                generateBtn.textContent = 'Buat Flashcards';
+                topicInput.value = '';
+                showScreen('config');
+            }
+            
+            /** Dipanggil saat tombol "Buat" di layar config ditekan */
+            async function handleGenerateClick() {
+                const topic = topicInput.value;
+                if (!topic || topic.trim() === "") {
+                    alert("Silakan masukkan topik materi terlebih dahulu.");
+                    return;
+                }
+
+                const settings = {
+                    topic: topic,
+                    amount: parseInt(amountSlider.value, 10),
+                    difficulty: difficultyOptions.querySelector('.selected').dataset.value
+                };
+
+                console.log(`Membuat ${globalState.currentMode} dengan:`, settings);
+                showLoader();
+
+                if (globalState.currentMode === 'quiz') {
+                    await fetchQuizData(settings);
+                } else {
+                    await fetchFlashcardData(settings);
+                }
+            }
+
+            /** Menghubungi AI untuk membuat Kuis */
+            async function fetchQuizData(settings) {
+                const prompt = `Buatkan saya ${settings.amount} pertanyaan kuis pilihan ganda (4 opsi) tentang ${settings.topic} dengan tingkat kesulitan ${settings.difficulty}. Berikan jawaban yang benar untuk setiap pertanyaan. Format sebagai JSON array.`;
+                const system = "Anda adalah asisten pembuat kuis. Jawab HANYA dengan format JSON yang diminta. JSON harus berupa array dari objek, di mana setiap objek memiliki 'question' (string), 'options' (array string 4 opsi), dan 'answer' (string yang cocok dengan salah satu opsi).";
+
+                try {
+                    const parsedData = await callAI(prompt, system);
+                    if (!Array.isArray(parsedData) || parsedData.length === 0 || !parsedData[0].question || !parsedData[0].options || !parsedData[0].answer) {
+                         throw new Error("Format JSON dari AI tidak valid untuk kuis.");
+                    }
+                    const newQuiz = { id: Date.now(), topic: settings.topic, difficulty: settings.difficulty, questions: parsedData };
+                    appData.quizzes.push(newQuiz);
+                    saveData();
+                    alert('Kuis berhasil dibuat dan disimpan!');
+                    renderSavedQuizzes();
+                    showScreen('dashboard'); // BARU: Arahkan ke dashboard
+
+                } catch (error) {
+                    console.error("Error mengambil data kuis:", error);
+                    alert(`Gagal membuat kuis: ${error.message}.`);
+                } finally {
+                    hideLoader();
+                }
+            }
+            
+            /** Menghubungi AI untuk membuat Flashcard */
+            async function fetchFlashcardData(settings) {
+                const prompt = `Buatkan saya ${settings.amount} flashcard tentang ${settings.topic} dengan tingkat kesulitan ${settings.difficulty}. Satu istilah dan satu definisi per kartu. Format sebagai JSON array.`;
+                const system = "Anda adalah asisten pembuat flashcard. Jawab HANYA dengan format JSON yang diminta. JSON harus berupa array dari objek, di mana setiap objek memiliki 'term' (string, istilah) dan 'definition' (string, definisi singkat).";
+
+                try {
+                    const parsedData = await callAI(prompt, system);
+                    if (!Array.isArray(parsedData) || parsedData.length === 0 || !parsedData[0].term || !parsedData[0].definition) {
+                         throw new Error("Format JSON dari AI tidak valid untuk flashcard.");
+                    }
+                    const newFlashcardSet = { id: Date.now(), topic: settings.topic, difficulty: settings.difficulty, cards: parsedData };
+                    appData.flashcards.push(newFlashcardSet);
+                    saveData();
+                    alert('Flashcard berhasil dibuat dan disimpan!');
+                    renderSavedFlashcards();
+                    showScreen('dashboard'); // BARU: Arahkan ke dashboard
+
+                } catch (error) {
+                    console.error("Error mengambil data flashcard:", error);
+                    alert(`Gagal membuat flashcard: ${error.message}.`);
+                } finally {
+                    hideLoader();
+                }
+            }
+
+            /** Fungsi umum untuk memanggil AI dan mem-parsing respons */
+            async function callAI(prompt, system) {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, system })
+                });
+                
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const responseText = await response.text();
+                console.log("Respon Teks dari AI:", responseText);
+
+                try { return JSON.parse(responseText); } catch (e) {
+                    const jsonMatch = responseText.match(/```json([\s\S]*?)```/);
+                    if (jsonMatch && jsonMatch[1]) return JSON.parse(jsonMatch[1]);
+                    throw new Error("Gagal mem-parsing JSON dari respons AI.");
+                }
+            }
+
+            // --- Logika Menjalankan Kuis ---
+            function handlePlayQuizClick(quizId) {
+                const quizToPlay = appData.quizzes.find(q => q.id === quizId);
+                if (!quizToPlay) return alert("Kuis tidak ditemukan!");
+                
+                globalState.currentQuiz = quizToPlay;
+                globalState.currentQuiz.userAnswers = new Array(quizToPlay.questions.length).fill(null);
+                globalState.currentQuiz.currentQuestionIndex = 0;
+                
+                startQuiz();
+            }
+
+            // --- Logika Hapus Kuis (BARU) ---
+            function handleDeleteQuiz(quizId) {
+                const quizTopic = appData.quizzes.find(q => q.id === quizId)?.topic || "Kuis";
+                if (confirm(`Apakah Anda yakin ingin menghapus kuis "${quizTopic}"?`)) {
+                    appData.quizzes = appData.quizzes.filter(q => q.id !== quizId);
+                    saveData();
+                    renderSavedQuizzes(); // Render ulang daftar di dashboard
+                }
+            }
+
+            function startQuiz() {
+                globalState.currentQuiz.currentQuestionIndex = 0;
+                quizTitle.textContent = globalState.currentQuiz.topic;
+                displayQuestion(0);
+                showScreen('quiz');
+            }
+
+            function displayQuestion(index) {
+                const quiz = globalState.currentQuiz;
+                const question = quiz.questions[index];
+                
+                questionText.textContent = question.question;
+                const progressPercent = ((index + 1) / quiz.questions.length) * 100;
+                progressText.textContent = `Pertanyaan ${index + 1} dari ${quiz.questions.length}`;
+                progressBar.style.width = `${progressPercent}%`;
+                answerOptionsContainer.innerHTML = '';
+
+                question.options.forEach((option) => {
+                    const isChecked = (quiz.userAnswers[index] === option);
+                    const optionElement = document.createElement('label');
+                    // PERBAIKAN: Menggunakan variabel tema di JS
+                    optionElement.className = "answer-option flex items-center gap-4 rounded-lg border border-solid border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-4 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/50 dark:has-[:checked]:border-primary cursor-pointer transition-all";
+                    optionElement.innerHTML = `
+                        <input class="h-5 w-5 appearance-none rounded-full border-2 border-border-light dark:border-border-dark bg-transparent checked:bg-primary checked:border-primary" 
+                               name="quiz_answer" type="radio" value="${option}" ${isChecked ? 'checked' : ''}>
+                        <p class="text-text-light-primary dark:text-dark-primary text-base font-medium leading-normal">${option}</p>
+                    `;
+                    optionElement.querySelector('input').addEventListener('change', () => {
+                        quiz.userAnswers[index] = option;
+                    });
+                    answerOptionsContainer.appendChild(optionElement);
+                });
+
+                prevQuestionBtn.style.display = (index === 0) ? 'none' : 'flex';
+                nextQuestionBtn.textContent = (index === quiz.questions.length - 1) ? 'Selesai' : 'Selanjutnya';
+            }
+
+            function calculateResults() {
+                let correctCount = 0;
+                const quiz = globalState.currentQuiz;
+                quiz.userAnswers.forEach((answer, index) => {
+                    if (answer === quiz.questions[index].answer) correctCount++;
+                });
+                const totalQuestions = quiz.questions.length;
+                const score = (correctCount / totalQuestions) * 100;
+                displayResults(correctCount, totalQuestions, score);
+            }
+
+            function displayResults(correctCount, totalQuestions, score) {
+                resultsTitle.textContent = globalState.currentQuiz.topic;
+                scorePercentageText.textContent = `${Math.round(score)}%`;
+                correctStatsText.textContent = `${correctCount}/${totalQuestions}`;
+                incorrectStatsText.textContent = `${totalQuestions - correctCount}/${totalQuestions}`;
+
+                const offset = CIRCLE_CIRCUMFERENCE * (1 - (score / 100));
+                setTimeout(() => { scoreCircle.style.strokeDashoffset = offset; }, 300);
+                scoreCircle.classList.toggle('stroke-error', score < 50);
+                scoreCircle.classList.toggle('stroke-success', score >= 50);
+                
+                showScreen('results');
+            }
+
+            // --- Logika Menjalankan Flashcard ---
+            function handlePlayFlashcardClick(setId) {
+                const setToPlay = appData.flashcards.find(s => s.id === setId);
+                if (!setToPlay) return alert("Set flashcard tidak ditemukan!");
+
+                globalState.currentFlashcardSet = setToPlay;
+                globalState.currentFlashcardIndex = 0;
+                
+                startFlashcards();
+            }
+
+            // --- Logika Hapus Flashcard (BARU) ---
+            function handleDeleteFlashcard(setId) {
+                const setTopic = appData.flashcards.find(s => s.id === setId)?.topic || "Set";
+                if (confirm(`Apakah Anda yakin ingin menghapus set flashcard "${setTopic}"?`)) {
+                    appData.flashcards = appData.flashcards.filter(s => s.id !== setId);
+                    saveData();
+                    renderSavedFlashcards(); // Render ulang daftar di dashboard
+                }
+            }
+
+
+            function startFlashcards() {
+                globalState.currentFlashcardIndex = 0;
+                flashcardTitle.textContent = globalState.currentFlashcardSet.topic;
+                displayFlashcard(0);
+                showScreen('flashcard');
+            }
+
+            function displayFlashcard(index) {
+                const set = globalState.currentFlashcardSet;
+                const card = set.cards[index];
+                
+                flashcardTerm.textContent = card.term;
+                flashcardDefinition.textContent = card.definition;
+                flashcardProgressText.textContent = `Kartu ${index + 1} dari ${set.cards.length}`;
+                flashcardInner.classList.remove('is-flipped');
+                prevFlashcardBtn.style.display = (index === 0) ? 'none' : 'flex';
+                nextFlashcardBtn.textContent = (index === set.cards.length - 1) ? 'Selesai' : 'Selanjutnya';
+            }
+
+
+            // --- Inisialisasi dan Event Listeners ---
+            function init() {
+                // Inisialisasi Tema
+                initTheme();
+                // --- PERUBAHAN JS ---
+                // Listener tombol tema sekarang ada di tombol modal
+                modalThemeToggle.addEventListener('click', toggleTheme);
+                
+                // Inisialisasi Data
+                loadSavedData();
+
+                // --- PERUBAHAN JS: Listener Modal Akun ---
+                accountNavBtn.addEventListener('click', () => {
+                    accountModal.classList.remove('hidden');
+                    updateNavActiveState('akun'); // Set state aktif
+                });
+                closeAccountModalBtn.addEventListener('click', () => {
+                    accountModal.classList.add('hidden');
+                    // Kembalikan state aktif ke layar yang sedang dilihat
+                    const currentScreen = document.querySelector('.screen.active').id.replace('-screen', '');
+                    updateNavActiveState(currentScreen);
+                });
+                // Bonus: Tutup modal jika klik di luar area kartu
+                accountModal.addEventListener('click', (e) => {
+                    if (e.target === accountModal) {
+                        accountModal.classList.add('hidden');
+                        const currentScreen = document.querySelector('.screen.active').id.replace('-screen', '');
+                        updateNavActiveState(currentScreen);
+                    }
+                });
+
+
+                // Navigasi Utama
+                startNewQuizBtn.addEventListener('click', setupConfigForQuiz);
+                startNewFlashcardBtn.addEventListener('click', setupConfigForFlashcard);
+                configBackBtn.addEventListener('click', () => showScreen('home'));
+
+                // Navigasi Bawah (BARU)
+                homeNavBtn.addEventListener('click', () => showScreen('home'));
+                dashboardNavBtn.addEventListener('click', () => showScreen('dashboard'));
+                dashboardBackBtn.addEventListener('click', () => showScreen('home')); // <-- BARU
+
+
+                // Navigasi Layar Config
+                amountSlider.addEventListener('input', (e) => { amountLabel.textContent = e.target.value; });
+                difficultyOptions.addEventListener('click', (e) => {
+                    const button = e.target.closest('.difficulty-btn');
+                    if (!button) return;
+                    // PERBAIKAN: Menggunakan variabel tema di JS
+                    difficultyOptions.querySelectorAll('.difficulty-btn').forEach(btn => {
+                        btn.classList.remove('selected', 'bg-primary/20', 'text-primary', 'border-transparent');
+                        btn.classList.add('border-border-light', 'dark:border-border-dark', 'bg-card-light', 'dark:bg-card-dark', 'text-text-light-secondary', 'dark:text-dark-secondary');
+                    });
+                    button.classList.add('selected', 'bg-primary/20', 'text-primary', 'border-transparent');
+                    button.classList.remove('border-border-light', 'dark:border-border-dark', 'bg-card-light', 'dark:bg-card-dark', 'text-text-light-secondary', 'dark:text-dark-secondary');
+                });
+                generateBtn.addEventListener('click', handleGenerateClick);
+
+                // Event Listeners untuk Daftar di Home (Delegation)
+                // --- PERUBAHAN: Listener ini sekarang untuk DASHBOARD ---
+                dashboardQuizListContainer.addEventListener('click', (e) => {
+                    const playButton = e.target.closest('.play-quiz-btn');
+                    if (playButton) {
+                        handlePlayQuizClick(parseInt(playButton.dataset.quizId, 10));
+                        return;
+                    }
+                    const deleteButton = e.target.closest('.delete-quiz-btn'); // BARU
+                    if (deleteButton) {
+                        handleDeleteQuiz(parseInt(deleteButton.dataset.quizId, 10));
+                        return;
+                    }
+                });
+                dashboardFlashcardListContainer.addEventListener('click', (e) => {
+                    const playButton = e.target.closest('.play-flashcard-btn');
+                    if (playButton) {
+                        handlePlayFlashcardClick(parseInt(playButton.dataset.flashcardId, 10));
+                        return;
+                    }
+                    const deleteButton = e.target.closest('.delete-flashcard-btn'); // BARU
+                    if (deleteButton) {
+                        handleDeleteFlashcard(parseInt(deleteButton.dataset.flashcardId, 10));
+                        return;
+                    }
+                });
+
+                // Navigasi Layar Kuis
+                quizCloseBtn.addEventListener('click', () => {
+                    if (confirm('Apakah Anda yakin ingin keluar? Kemajuan kuis ini tidak akan disimpan.')) {
+                        showScreen('home');
+                    }
+                });
+                nextQuestionBtn.addEventListener('click', () => {
+                    if (globalState.currentQuiz.currentQuestionIndex < globalState.currentQuiz.questions.length - 1) {
+                        globalState.currentQuiz.currentQuestionIndex++;
+                        displayQuestion(globalState.currentQuiz.currentQuestionIndex);
+                    } else {
+                        calculateResults();
+                    }
+                });
+                prevQuestionBtn.addEventListener('click', () => {
+                    if (globalState.currentQuiz.currentQuestionIndex > 0) {
+                        globalState.currentQuiz.currentQuestionIndex--;
+                        displayQuestion(globalState.currentQuiz.currentQuestionIndex);
+                    }
+                });
+
+                // Navigasi Layar Hasil
+                retakeQuizBtn.addEventListener('click', startQuiz); // Ulangi kuis yang sama
+                resultsHomeBtn.addEventListener('click', () => showScreen('home'));
+
+                // Navigasi Layar Flashcard
+                flashcardContainer.addEventListener('click', () => flashcardInner.classList.toggle('is-flipped'));
+                flashcardCloseBtn.addEventListener('click', () => showScreen('home'));
+                nextFlashcardBtn.addEventListener('click', () => {
+                    if (globalState.currentFlashcardIndex < globalState.currentFlashcardSet.cards.length - 1) {
+                        globalState.currentFlashcardIndex++;
+                        displayFlashcard(globalState.currentFlashcardIndex);
+                    } else {
+                        showScreen('home'); // Selesai, kembali ke home
+                    }
+                });
+                prevFlashcardBtn.addEventListener('click', () => {
+                    if (globalState.currentFlashcardIndex > 0) {
+                        globalState.currentFlashcardIndex--;
+                        displayFlashcard(globalState.currentFlashcardIndex);
+                    }
+                });
+
+                // Tampilkan layar awal
+                showScreen('home');
+            }
+
+            // Jalankan aplikasi
+            init();
+
+        }); // End DOMContentLoaded
+    </script>
+</body>
+</html>
