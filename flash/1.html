@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduCards - Belajar Cerdas</title>
+  <style>
+    :root {
+      --primary-start: #667eea;
+      --primary-end: #764ba2;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+      min-height: 100vh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #f8f9fa;
+      min-height: 100vh;
+      position: relative;
+      box-shadow: 0 0 50px rgba(0,0,0,0.2);
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .content {
+      padding: 20px;
+      padding-bottom: 80px;
+    }
+
+    .category-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+      padding-bottom: 5px;
+      scrollbar-width: none; /* Firefox */
+    }
+    .category-tabs::-webkit-scrollbar {
+      display: none; /* Chrome, Safari */
+    }
+
+    .category-tab {
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: white;
+      border: 2px solid #e0e0e0;
+      cursor: pointer;
+      white-space: nowrap;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .category-tab.active {
+      background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+      color: white;
+      border-color: var(--primary-start);
+    }
+
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .unit-card {
+      background: white;
+      border-radius: 15px;
+      padding: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .unit-card:active {
+      transform: scale(0.98);
+    }
+
+    .unit-card .type-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .unit-card .type-badge.flashcard {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .unit-card .type-badge.quiz {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+
+    .unit-card h3 {
+      font-size: 16px;
+      margin-bottom: 5px;
+      color: #333;
+    }
+
+    .unit-card p {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .unit-card .meta {
+      font-size: 12px;
+      color: #999;
+    }
+
+    .unit-card .actions {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      display: flex;
+      gap: 5px;
+    }
+
+    .unit-card .actions button {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 8px;
+      background: #f5f5f5;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .fab {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+      color: white;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      transition: all 0.3s;
+      z-index: 100;
+    }
+
+    .fab:active {
+      transform: scale(0.9);
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      max-width: 400px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: slideUp 0.3s;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .modal-header {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--primary-start);
+    }
+
+    .type-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .type-option {
+      flex: 1;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .type-option.active {
+      border-color: var(--primary-start);
+      background: #f0f4ff;
+    }
+
+    .type-option .icon {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    .type-option .label {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 10px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #666;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255,255,255,0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      flex-direction: column;
+    }
+
+    .loading.show {
+      display: flex;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #e0e0e0;
+      border-top-color: var(--primary-start);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .flashcard-view,
+    .quiz-view {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+      display: none;
+      z-index: 999;
+    }
+
+    .flashcard-view.show,
+    .quiz-view.show {
+      display: block;
+    }
+
+    .play-header {
+      padding: 20px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .close-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: rgba(255,255,255,0.3);
+      margin: 0 20px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: white;
+      transition: width 0.3s;
+    }
+
+    .card-container {
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 200px);
+    }
+
+    .flashcard {
+      width: 100%;
+      max-width: 350px;
+      height: 450px;
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      cursor: pointer;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s;
+    }
+
+    .flashcard.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      padding: 30px;
+      backface-visibility: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+    }
+
+    .card-label {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 20px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .card-text {
+      font-size: 20px;
+      line-height: 1.5;
+      color: #333;
+    }
+
+    .nav-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      padding: 20px;
+    }
+
+    .nav-btn {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 25px;
+      background: rgba(255,255,255,0.9);
+      color: var(--primary-start);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .quiz-card {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      margin: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .question {
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: #333;
+      font-weight: 600;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .option {
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: white;
+    }
+
+    .option:active {
+      transform: scale(0.98);
+    }
+
+    .option.selected {
+      border-color: var(--primary-start);
+      background: #f0f4ff;
+    }
+
+    .option.correct {
+      border-color: #4caf50;
+      background: #e8f5e9;
+    }
+
+    .option.wrong {
+      border-color: #f44336;
+      background: #ffebee;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📚 EduCards</h1>
+      <p>Belajar Cerdas dengan AI</p>
+    </div>
+
+    <div class="content">
+      <div class="category-tabs">
+        <div class="category-tab active" onclick="filterCategory('all', this)">Semua</div>
+        <div class="category-tab" onclick="filterCategory('flashcard', this)">Flashcard</div>
+        <div class="category-tab" onclick="filterCategory('quiz', this)">Quiz</div>
+      </div>
+
+      <div class="card-list" id="cardList"></div>
+
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="icon">📝</div>
+        <p>Belum ada learning unit.<br>Tap tombol + untuk membuat.</p>
+      </div>
+    </div>
+
+    <button class="fab" onclick="showCreateModal()">+</button>
+  </div>
+
+  <!-- Modal Create -->
+  <div class="modal" id="createModal">
+    <div class="modal-content">
+      <div class="modal-header">Buat Learning Unit</div>
+      
+      <div class="type-selector">
+        <div class="type-option active" onclick="selectType('flashcard', this)">
+          <div class="icon">🗂️</div>
+          <div class="label">Flashcard</div>
+        </div>
+        <div class="type-option" onclick="selectType('quiz', this)">
+          <div class="icon">✍️</div>
+          <div class="label">Quiz</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Judul</label>
+        <input type="text" id="titleInput" placeholder="Contoh: Kosakata Bahasa Inggris">
+      </div>
+
+      <div class="form-group">
+        <label>Deskripsi Topik</label>
+        <textarea id="descInput" rows="3" placeholder="Jelaskan materi yang ingin dipelajari..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Jumlah <span id="itemLabel">Cards</span></label>
+        <input type="number" id="countInput" value="5" min="3" max="20">
+      </div>
+
+      <div class="form-group" id="difficultyGroup" style="display:none;">
+        <label>Tingkat Kesulitan</label>
+        <select id="difficultyInput">
+          <option value="mudah">Mudah</option>
+          <option value="sedang">Sedang</option>
+          <option value="sulit">Sulit</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" onclick="generateUnit()">Generate dengan AI</button>
+      <button class="btn btn-secondary" onclick="closeModal('createModal')">Batal</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Membuat materi dengan AI...</div>
+  </div>
+
+  <!-- Flashcard View -->
+  <div class="flashcard-view" id="flashcardView">
+    <div class="play-header">
+      <button class="close-btn" onclick="closePlay()">✕</button>
+      <div style="flex:1;text-align:center;color:white;">
+        <div id="flashcardTitle" style="font-weight:700;font-size:16px;"></div>
+        <div id="flashcardProgress" style="font-size:12px;margin-top:5px;opacity:0.9;"></div>
+      </div>
+      <div style="width:36px;"></div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="flashcardProgressBar"></div>
+    </div>
+    <div class="card-container">
+      <div class="flashcard" id="flashcard" onclick="flipCard()">
+        <div class="card-face card-front">
+          <div class="card-label">Pertanyaan</div>
+          <div class="card-text" id="cardFront"></div>
+        </div>
+        <div class="card-face card-back">
+          <div class="card-label">Jawaban</div>
+          <div class="card-text" id="cardBack"></div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-buttons">
+      <button class="nav-btn" id="prevBtn" onclick="prevCard()">← Prev</button>
+      <button class="nav-btn" id="nextBtn" onclick="nextCard()">Next →</button>
+    </div>
+  </div>
+
+  <!-- Quiz View -->
+  <div class="quiz-view" id="quizView">
+    <div class="play-header">
+      <button class="close-btn" onclick="closePlay()">✕</button>
+      <div style="flex:1;text-align:center;color:white;">
+        <div id="quizTitle" style="font-weight:700;font-size:16px;"></div>
+        <div id="quizProgress" style="font-size:12px;margin-top:5px;opacity:0.9;"></div>
+      </div>
+      <div style="width:36px;"></div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="quizProgressBar"></div>
+    </div>
+    <div class="card-container">
+      <div class="quiz-card">
+        <div class="question" id="quizQuestion"></div>
+        <div class="options" id="quizOptions"></div>
+        <button class="btn btn-primary" id="quizNextBtn" onclick="nextQuiz()" style="margin-top:20px;display:none;">Lanjut →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message Modal -->
+  <div class="modal" id="messageModal">
+    <div class="modal-content">
+      <div class="modal-header" id="messageTitle"></div>
+      <p id="messageText" style="margin-bottom: 20px; font-size: 15px; line-height: 1.5;"></p>
+      <button class="btn btn-primary" onclick="closeModal('messageModal')">OK</button>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div class="modal" id="confirmModal">
+    <div class="modal-content">
+      <div class="modal-header" id="confirmTitle"></div>
+      <p id="confirmText" style="margin-bottom: 20px; font-size: 15px; line-height: 1.5;"></p>
+      <button class="btn btn-primary" id="confirmBtn">Ya</button>
+      <button class="btn btn-secondary" onclick="closeModal('confirmModal')">Batal</button>
+    </div>
+  </div>
+
+  <script>
+    let currentType = 'flashcard';
+    let currentFilter = 'all';
+    let currentUnit = null;
+    let currentCardIndex = 0;
+    let quizAnswers = [];
+    let confirmCallback = null;
+
+    // --- Modal Functions ---
+    function showMessage(title, text) {
+      document.getElementById('messageTitle').textContent = title;
+      document.getElementById('messageText').textContent = text;
+      document.getElementById('messageModal').classList.add('show');
+    }
+
+    function showConfirm(title, text, callback) {
+      confirmCallback = callback;
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmText').textContent = text;
+      document.getElementById('confirmModal').classList.add('show');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('show');
+      if (modalId === 'confirmModal') {
+        confirmCallback = null; // Reset callback if cancelled
+      }
+    }
+
+    // --- Storage & Render Functions ---
+    function loadUnits() {
+      try {
+        const units = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('unit:')) {
+            const data = localStorage.getItem(key);
+            if (data) {
+              units.push(JSON.parse(data));
+            }
+          }
+        }
+        // Sort by creation date (newest first)
+        units.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        renderUnits(units);
+      } catch (e) {
+        console.error('Error loading units:', e);
+        renderUnits([]);
+      }
+    }
+
+    function renderUnits(units) {
+      const filtered = currentFilter === 'all' ? units : units.filter(u => u.type === currentFilter);
+      const listEl = document.getElementById('cardList');
+      const emptyEl = document.getElementById('emptyState');
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+      listEl.innerHTML = filtered.map(unit => `
+        <div class="unit-card" onclick="playUnit('${unit.id}')">
+          <div class="actions">
+            <button onclick="event.stopPropagation(); deleteUnit('${unit.id}')">🗑️</button>
+          </div>
+          <div class="type-badge ${unit.type}">${unit.type === 'flashcard' ? 'Flashcard' : 'Quiz'}</div>
+          <h3>${unit.title}</h3>
+          <p>${unit.description}</p>
+          <div class="meta">${unit.items.length} ${unit.type === 'flashcard' ? 'cards' : 'soal'}</div>
+        </div>
+      `).join('');
+    }
+
+    function filterCategory(cat, el) {
+      currentFilter = cat;
+      document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      loadUnits();
+    }
+
+    // --- Create Modal Functions ---
+    function showCreateModal() {
+      document.getElementById('createModal').classList.add('show');
+    }
+
+    function selectType(type, el) {
+      currentType = type;
+      document.querySelectorAll('.type-option').forEach(t => t.classList.remove('active'));
+      el.closest('.type-option').classList.add('active');
+      
+      document.getElementById('itemLabel').textContent = type === 'flashcard' ? 'Cards' : 'Soal';
+      document.getElementById('difficultyGroup').style.display = type === 'quiz' ? 'block' : 'none';
+    }
+
+    async function generateUnit() {
+      const title = document.getElementById('titleInput').value.trim();
+      const desc = document.getElementById('descInput').value.trim();
+      const count = parseInt(document.getElementById('countInput').value);
+      const difficulty = document.getElementById('difficultyInput').value;
+
+      if (!title || !desc) {
+        showMessage('Input Tidak Lengkap', 'Mohon isi judul dan deskripsi topik.');
+        return;
+      }
+
+      closeModal('createModal');
+      document.getElementById('loading').classList.add('show');
+
+      try {
+        let prompt, systemPrompt;
+
+        if (currentType === 'flashcard') {
+          systemPrompt = 'Kamu adalah pembuat flashcard edukasi. Berikan response dalam format JSON array saja tanpa penjelasan tambahan. Format: [{"front":"pertanyaan","back":"jawaban"}]';
+          prompt = `Buatkan ${count} flashcard untuk topik: ${title}. Deskripsi: ${desc}. Format JSON: [{"front":"...","back":"..."}]`;
+        } else {
+          systemPrompt = 'Kamu adalah pembuat soal quiz. Berikan response dalam format JSON array saja tanpa penjelasan tambahan. Format: [{"question":"soal","options":["A","B","C","D"],"correct":0}]';
+          prompt = `Buatkan ${count} soal quiz tingkat ${difficulty} untuk topik: ${title}. Deskripsi: ${desc}. Format JSON: [{"question":"...","options":["..."],"correct":index}]`;
+        }
+
+        const response = await fetch('https://taraka.id/apigate/nvidia.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, system: systemPrompt })
+        });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+        
+        // Coba baca sebagai teks dulu untuk membersihkan
+        const rawData = await response.text();
+        let content;
+        
+        if (!rawData) {
+          throw new Error("API returned an empty response.");
+        }
+
+        try {
+            // Bersihkan dari markdown wrapper jika ada
+            const cleanData = rawData.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            
+            if (!cleanData) {
+               throw new Error("API returned empty or invalid content after cleaning.");
+            }
+            
+            // TAHAP 1: Parse respons API (yang merupakan string ter-encode JSON)
+            // Ini akan menghasilkan string biasa, misal: "[{...}, {...}]"
+            let parsedData = JSON.parse(cleanData);
+
+            // TAHAP 2: Periksa apakah hasil TAHAP 1 adalah string, dan parse string itu
+            // untuk mendapatkan array/objek JavaScript yang sebenarnya.
+            if (typeof parsedData === 'string') {
+                const trimmedParsedData = parsedData.trim();
+                // Pastikan itu benar-benar terlihat seperti JSON sebelum di-parse lagi
+                if (trimmedParsedData.startsWith('[') || trimmedParsedData.startsWith('{')) {
+                    content = JSON.parse(trimmedParsedData); // Ini akan menghasilkan array
+                } else {
+                    // AI mengembalikan string biasa, bukan format JSON yang diminta
+                    throw new Error("AI returned a simple string, not the expected JSON format.");
+                }
+            } else {
+                // Jika API mengembalikan objek/array JSON secara langsung (kasus lain)
+                content = parsedData;
+            }
+
+        } catch (parseError) {
+            console.error("Gagal parse JSON:", parseError);
+            console.error("Data mentah:", rawData); // Log data mentah untuk debug
+            // Re-throw a more informative error to be caught by the outer try...catch
+            throw new Error(`Gagal memproses respons dari AI. Pastikan format JSON benar.`);
+        }
+
+
+        const unit = {
+          id: 'unit_' + Date.now(),
+          type: currentType,
+          title,
+          description: desc,
+          items: content,
+          createdAt: new Date().toISOString()
+        };
+
+        localStorage.setItem(`unit:${unit.id}`, JSON.stringify(unit));
+        
+        document.getElementById('loading').classList.remove('show');
+        document.getElementById('titleInput').value = '';
+        document.getElementById('descInput').value = '';
+        
+        loadUnits();
+      } catch (error) {
+        document.getElementById('loading').classList.remove('show');
+        showMessage('Terjadi Kesalahan', 'Gagal membuat materi: ' + error.message);
+        console.error(error);
+      }
+    }
+
+    function deleteUnit(id) {
+      showConfirm('Hapus Unit?', 'Apakah Anda yakin ingin menghapus learning unit ini?', () => {
+        try {
+          localStorage.removeItem(`unit:${id}`);
+          loadUnits();
+        } catch (e) {
+          console.error('Error deleting:', e);
+          showMessage('Error', 'Gagal menghapus unit.');
+        }
+      });
+    }
+
+    // --- Play Functions ---
+    function playUnit(id) {
+      try {
+        const data = localStorage.getItem(`unit:${id}`);
+        if (!data) return;
+        
+        currentUnit = JSON.parse(data);
+        currentCardIndex = 0;
+        quizAnswers = [];
+
+        if (currentUnit.type === 'flashcard') {
+          showFlashcard();
+        } else {
+          showQuiz();
+        }
+      } catch (e) {
+        console.error('Error loading unit:', e);
+        showMessage('Error', 'Gagal memuat unit.');
+      }
+    }
+
+    function closePlay() {
+      document.getElementById('flashcardView').classList.remove('show');
+      document.getElementById('quizView').classList.remove('show');
+      currentUnit = null;
+      currentCardIndex = 0;
+      quizAnswers = [];
+    }
+
+    // --- Flashcard Functions ---
+    function showFlashcard() {
+      document.getElementById('flashcardView').classList.add('show');
+      document.getElementById('flashcardTitle').textContent = currentUnit.title;
+      updateFlashcard();
+    }
+
+    function updateFlashcard() {
+      const card = currentUnit.items[currentCardIndex];
+      document.getElementById('cardFront').textContent = card.front;
+      document.getElementById('cardBack').textContent = card.back;
+      document.getElementById('flashcardProgress').textContent = `${currentCardIndex + 1} / ${currentUnit.items.length}`;
+      document.getElementById('flashcardProgressBar').style.width = `${((currentCardIndex + 1) / currentUnit.items.length) * 100}%`;
+      
+      document.getElementById('prevBtn').disabled = currentCardIndex === 0;
+      document.getElementById('nextBtn').disabled = currentCardIndex === currentUnit.items.length - 1;
+      
+      document.getElementById('flashcard').classList.remove('flipped');
+    }
+
+    function flipCard() {
+      document.getElementById('flashcard').classList.toggle('flipped');
+    }
+
+    function prevCard() {
+      if (currentCardIndex > 0) {
+        currentCardIndex--;
+        updateFlashcard();
+      }
+    }
+
+    function nextCard() {
+      if (currentCardIndex < currentUnit.items.length - 1) {
+        currentCardIndex++;
+        updateFlashcard();
+      }
+    }
+
+    // --- Quiz Functions ---
+    function showQuiz() {
+      document.getElementById('quizView').classList.add('show');
+      document.getElementById('quizTitle').textContent = currentUnit.title;
+      updateQuiz();
+    }
+
+    function updateQuiz() {
+      const quiz = currentUnit.items[currentCardIndex];
+      document.getElementById('quizQuestion').textContent = `${currentCardIndex + 1}. ${quiz.question}`;
+      document.getElementById('quizProgress').textContent = `Soal ${currentCardIndex + 1} / ${currentUnit.items.length}`;
+      document.getElementById('quizProgressBar').style.width = `${((currentCardIndex + 1) / currentUnit.items.length) * 100}%`;
+      
+      const optionsHtml = quiz.options.map((opt, idx) => 
+        `<div class="option" onclick="selectOption(${idx}, this)">${String.fromCharCode(65 + idx)}. ${opt}</div>`
+      ).join('');
+      
+      document.getElementById('quizOptions').innerHTML = optionsHtml;
+      document.getElementById('quizNextBtn').style.display = 'none';
+    }
+
+    function selectOption(idx, el) {
+      const quiz = currentUnit.items[currentCardIndex];
+      const options = document.querySelectorAll('.option');
+      
+      // Matikan semua pilihan
+      options.forEach(opt => {
+        opt.style.pointerEvents = 'none';
+      });
+
+      // Tampilkan jawaban benar dan salah
+      options.forEach((opt, i) => {
+        if (i === quiz.correct) {
+          opt.classList.add('correct');
+        } else if (i === idx && i !== quiz.correct) {
+          opt.classList.add('wrong');
+        }
+      });
+
+      quizAnswers.push(idx === quiz.correct);
+      document.getElementById('quizNextBtn').style.display = 'block';
+    }
+
+    function nextQuiz() {
+      if (currentCardIndex < currentUnit.items.length - 1) {
+        currentCardIndex++;
+        updateQuiz();
+      } else {
+        const correct = quizAnswers.filter(a => a).length;
+        const total = currentUnit.items.length;
+        const score = Math.round((correct / total) * 100);
+        
+        closePlay(); // Tutup dulu
+        // Tampilkan skor di modal
+        showMessage(`Quiz Selesai!`, `Benar: ${correct} / ${total}\nSkor Anda: ${score}%`);
+      }
+    }
+
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+      // Event listener untuk tombol konfirmasi
+      document.getElementById('confirmBtn').addEventListener('click', () => {
+        if (confirmCallback) {
+          confirmCallback();
+        }
+        closeModal('confirmModal');
+      });
+
+      // Load units on startup
+      loadUnits();
+    });
+  </script>
+</body>
+</html>
