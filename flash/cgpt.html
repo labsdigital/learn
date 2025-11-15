@@ -283,7 +283,7 @@
 /*
   MicroLearn single-file app
   - localStorage-based storage
-  - Calls Gemini API for content generation
+  - Calls taraka.id API for content generation
   - Falls back to internal generator on API failure
   - supports Flashcard and Quiz units
 */
@@ -310,122 +310,39 @@ function toast(msg, timeout=2200){
   setTimeout(()=> container.removeChild(t), timeout);
 }
 
-/* ---------- Gemini API integration ---------- */
+/* ---------- API integration (taraka.id) ---------- */
+/*
+  Uses your reference endpoint: https://taraka.id/apigate/index.php
+  The API in the reference expects JSON: { prompt: "...", system: "..." } and returns plain text
+  We'll attempt to request structured JSON by asking the API to produce JSON; if the response isn't parseable,
+  we fallback to local generator.
+*/
+const API_ENDPOINT = 'https://taraka.id/apigate/index.php';
 
-// Definisikan skema JSON yang kita harapkan dari API
-const flashcardSchema = {
-  type: "OBJECT",
-  properties: {
-    cards: {
-      type: "ARRAY",
-      items: {
-        type: "OBJECT",
-        properties: {
-          front: { type: "STRING" },
-          back: { type: "STRING" }
-        },
-        required: ["front", "back"]
-      }
+async function callAI(prompt, system='Jawab dengan sangat singkat.'){
+  // Try to fetch from the provided endpoint with the given prompt
+  try{
+    const body = { prompt, system };
+    const res = await fetch(API_ENDPOINT, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(body),
+    });
+    if(!res.ok) throw new Error('bad response');
+    const text = await res.text();
+    // If API returns something that looks like JSON, parse; else return as text
+    try{
+      return JSON.parse(text);
+    }catch(e){
+      // return raw text (may be single answer); caller handles parsing or fallback
+      return text;
     }
-  },
-  required: ["cards"]
-};
-
-const quizSchema = {
-  type: "OBJECT",
-  properties: {
-    questions: {
-      type: "ARRAY",
-      items: {
-        type: "OBJECT",
-        properties: {
-          question: { type: "STRING" },
-          choices: { type: "ARRAY", items: { type: "STRING" } },
-          answer: { type: "NUMBER", description: "Indeks (berbasis 0) dari jawaban yang benar" }
-        },
-        required: ["question", "choices", "answer"]
-      }
-    }
-  },
-  required: ["questions"]
-};
-
-async function callAI(prompt, type) {
-  const apiKey = ""; // Disediakan oleh environment Canvas
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-  let schema;
-  if (type === 'flashcard') {
-    schema = flashcardSchema;
-  } else if (type === 'quiz') {
-    schema = quizSchema;
-  } else {
-    throw new Error("Tipe unit tidak valid untuk panggilan AI");
-  }
-
-  const payload = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: schema,
-      // temperature: 0.8 (opsional)
-    },
-    systemInstruction: {
-        parts: [{ text: "Anda adalah asisten pembuat materi pembelajaran yang membantu membuat flashcard dan kuis dalam Bahasa Indonesia." }]
-    }
-  };
-
-  // Implementasi retry/backoff sederhana untuk menangani throttling (429)
-  let response;
-  const maxRetries = 3;
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-        response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        if (response.ok) break; // Sukses, keluar dari loop
-
-        if (response.status !== 429) {
-           // Gagal karena alasan lain, jangan coba lagi
-           console.error("Panggilan API gagal dengan status:", response.status);
-           throw new Error(`Panggilan API gagal: ${response.statusText}`);
-        }
-        
-        // Jika status 429 (throttled), tunggu dan coba lagi
-        // Jangan log error ini ke console
-        const delay = 1000 * Math.pow(2, i) + Math.random() * 1000;
-        await new Promise(res => setTimeout(res, delay));
-        
-    } catch (err) {
-        // Tangkap error network, dll.
-        if (i === maxRetries - 1) throw err; // Gagal di percobaan terakhir
-        // jangan log error network sementara
-    }
-  }
-  
-  if (!response || !response.ok) {
-      throw new Error("Permintaan API gagal setelah beberapa kali percobaan.");
-  }
-
-  const result = await response.json();
-  const candidate = result.candidates?.[0];
-
-  if (candidate && candidate.content?.parts?.[0]?.text) {
-    try {
-      // API menjamin ini adalah string JSON yang valid sesuai skema
-      return JSON.parse(candidate.content.parts[0].text);
-    } catch (e) {
-      console.error("Gagal mem-parsing JSON dari AI, meskipun dalam mode JSON:", e);
-      throw new Error("Respons JSON tidak valid dari AI");
-    }
-  } else {
-    console.error("Struktur respons API tidak valid:", result);
-    throw new Error("Tidak ada konten valid dari AI");
+  }catch(err){
+    // network or CORS blocked -> indicate failure to caller
+    throw err;
   }
 }
+
 
 /* ---------- Local fallback generators ---------- */
 function generateFlashcardsLocal(title, desc, count){
@@ -556,20 +473,25 @@ document.getElementById('modal-create').addEventListener('click', async ()=>{
   // show spinner
   showSpinner(true);
 
-  // Build prompt for the AI
+  // Build prompt for the AI - ask for JSON
   const prompt = buildPrompt(type, title, desc, count, level);
   try{
     // try AI call
-    // Mengirim 'prompt' dan 'type' (untuk memilih skema)
-    const structured = await callAI(prompt, type);
+    const aiResp = await callAI(prompt, 'Buatkan output dalam format JSON yang sesuai untuk membuat flashcard/quiz sehingga mudah di-parse oleh program.');
+    // aiResp can be string, or object already parsed
+    let structured = null;
+    if(typeof aiResp === 'string'){
+      // try to extract JSON from a long text
+      const jsonMatch = aiResp.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+      try{ structured = JSON.parse(jsonMatch ? jsonMatch[0] : aiResp); }catch(e){ structured = null; }
+    } else if(typeof aiResp === 'object'){ structured = aiResp; }
 
     if(structured){
       // Map to our deck model depending on type
       if(type==='flashcard'){
         // expect structured.cards = [{front, back}, ...]
         // Validasi data yang diterima dari AI
-        const cards = (structured.cards && Array.isArray(structured.cards) ? structured.cards : [])
-            .map(c=>({id:uid('c'), front:c.front || '', back:c.back || ''}))
+        const cards = (structured.cards || structured.flashcards || []).map(c=>({id:uid('c'), front:c.front || c.q || '', back:c.back || c.a || ''}))
             .filter(c => c.front && c.back); // Pastikan kartu tidak kosong
 
         if(cards.length === 0) throw new Error("AI mengembalikan data kartu yang tidak valid");
@@ -578,15 +500,17 @@ document.getElementById('modal-create').addEventListener('click', async ()=>{
         addDeck(deck);
 
       } else {
-        // quiz -> structured.questions = [{question, choices:[...], answer: index}]
-        const qs = (structured.questions && Array.isArray(structured.questions) ? structured.questions : [])
-            .map(q=>{
-                const choices = (q.choices && Array.isArray(q.choices)) ? q.choices : [];
-                // Validasi jawaban, pastikan indeks valid
-                let ans = (typeof q.answer === 'number' && q.answer >= 0 && q.answer < choices.length) ? q.answer : 0;
-                return { id:uid('q'), question: q.question || '', choices, answer: ans };
-            })
-            .filter(q => q.question && q.choices.length > 1); // Pastikan soal & pilihan ada
+        // quiz -> structured.questions = [{question, choices:[...], answer: index or text}]
+        const qs = (structured.questions || structured.quiz || []).map(q=>{
+            const choices = q.choices || q.options || [];
+            // Validasi jawaban, coba cari teks atau gunakan indeks
+            let ans = 0;
+            if(typeof q.answer === 'number') ans = q.answer;
+            else if(typeof q.answer === 'string') ans = choices.findIndex(c=>c.toLowerCase().includes(q.answer.toLowerCase()));
+            
+            return { id:uid('q'), question: q.question || q.q, choices, answer: ans>=0?ans:0 };
+        })
+        .filter(q => q.question && q.choices.length > 1); // Pastikan soal & pilihan ada
 
         if(qs.length === 0) throw new Error("AI mengembalikan data kuis yang tidak valid");
 
@@ -620,14 +544,14 @@ document.getElementById('modal-create').addEventListener('click', async ()=>{
 });
 
 function buildPrompt(type, title, desc, count, level){
-  const lang = "Gunakan bahasa Indonesia.";
+  const lang = "Gunakan bahasa Indonesia. Jangan sertakan penjelasan lain.";
   if(type==='flashcard'){
     // Prompt disederhanakan, tidak perlu instruksi format JSON
-    return `Buatkan ${count} flashcard (kartu bolak-balik) yang singkat dan jelas tentang "${title}". Deskripsi materi: ${desc}. ${lang}`;
+    return `Buatkan ${count} flashcard singkat dan terstruktur tentang "${title}". Deskripsi materi: ${desc}. Output harus berupa JSON: { "cards":[{"front":"...","back":"..."}] }. ${lang}`;
   } else {
     const choicesCount = { easy: 3, medium: 4, hard: 4 }[level] || 4;
     // Prompt disederhanakan, skema akan mengurus format 'answer' sebagai indeks
-    return `Buatkan ${count} soal pilihan berganda (quiz) tentang "${title}" dengan tingkat kesulitan ${level}. Setiap soal harus memiliki ${choicesCount} pilihan jawaban. Deskripsi materi: ${desc}. ${lang}`;
+    return `Buatkan ${count} soal pilihan berganda (quiz) tentang "${title}" dengan tingkat kesulitan ${level}. Sertakan ${choicesCount} pilihan tiap soal dan berikan jawaban yang benar sebagai index (0-based). Output harus berupa JSON: { "questions":[{"question":"...","choices":["A","B","C"],"answer":0}] }. ${lang}`;
   }
 }
 
@@ -812,7 +736,8 @@ document.getElementById('btn-clear').addEventListener('click', ()=>{
 
 document.getElementById('btn-sync').addEventListener('click', ()=>{
   // Ganti alert() dengan toast atau modal kustom
-  toast('API: Menggunakan Gemini (Google) untuk membuat unit.', 2500);
+  const msg = 'API: Mencoba ' + API_ENDPOINT + '. Fallback ke generator lokal jika gagal.';
+  toast(msg, 3000);
 });
 
 /* ---------- Init ---------- */
