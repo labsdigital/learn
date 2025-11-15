@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MiniLearn — Flashcard & Quiz (single file)</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#258cf4",
+            "background-light": "#f5f7f8",
+            "background-dark": "#0b1220",
+            success: "#2ECC71",
+            danger: "#E74C3C"
+          },
+          fontFamily: { display: ["Lexend","sans-serif"] },
+          borderRadius: { DEFAULT: "0.5rem", lg: "0.75rem" }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root { -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+    body { font-family: Lexend, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; min-height:100dvh; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    /* card flip */
+    .flip-card { perspective: 1200px; }
+    .flip-inner { transform-style: preserve-3d; transition: transform 450ms cubic-bezier(.2,.9,.25,1); }
+    .flip-card:hover .flip-inner { /* for desktop hover */ }
+    .flip-front, .flip-back {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      position:absolute; inset:0;
+    }
+    .flip-back { transform: rotateY(180deg); }
+    .flipped { transform: rotateY(180deg); }
+    /* subtle glass */
+    .glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(6px); }
+    .dark .glass { background: rgba(8,10,15,0.45); }
+    /* mobile large tap targets */
+    .btn-lg { padding: 0.75rem 1rem; border-radius: .75rem; }
+    /* spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { border: 3px solid rgba(0,0,0,0.08); border-top-color: rgba(0,0,0,0.4); border-radius:50%; width:28px; height:28px; animation: spin 1s linear infinite; }
+    .dark .spinner { border:3px solid rgba(255,255,255,0.06); border-top-color: rgba(255,255,255,0.6); }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
+
+<!-- App shell -->
+<div id="app" class="min-h-screen flex flex-col">
+
+  <!-- Top bar -->
+  <header class="flex items-center justify-between px-4 py-3 sticky top-0 z-20 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-sm">
+    <div class="flex items-center gap-2">
+      <button id="btn-back" class="p-2 rounded-lg text-slate-700 dark:text-slate-200 hidden"><span class="material-symbols-outlined">arrow_back</span></button>
+      <h1 class="text-center text-lg font-bold flex-1">MiniLearn</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="toggle-theme" class="p-2 rounded-lg bg-transparent"><span class="material-symbols-outlined">dark_mode</span></button>
+      <button id="btn-new" title="Buat unit baru" class="p-2 rounded-lg bg-primary text-white shadow"><span class="material-symbols-outlined">add</span></button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="flex-1 overflow-y-auto p-4">
+    <!-- categories + units -->
+    <section id="categories" class="space-y-6">
+      <!-- dynamically filled -->
+    </section>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="mt-8 hidden">
+      <div class="glass rounded-xl p-6 text-center mx-auto max-w-md">
+        <div class="mx-auto w-16 h-16 rounded-full bg-primary/20 text-primary flex items-center justify-center mb-4">
+          <span class="material-symbols-outlined text-3xl">lightbulb</span>
+        </div>
+        <h2 class="text-lg font-semibold">Belum ada unit</h2>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Buat flashcard atau kuis pertama Anda.</p>
+        <div class="mt-4 flex justify-center">
+          <button id="empty-create" class="btn-lg bg-primary text-white font-semibold">Buat sekarang</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom nav -->
+  <footer class="p-4 bg-background-light/90 dark:bg-background-dark/90 sticky bottom-0 z-10 backdrop-blur-sm">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <button id="btn-manage" class="p-3 rounded-lg glass flex items-center gap-2"><span class="material-symbols-outlined">folder_open</span><span class="hidden sm:inline">Kelola</span></button>
+        <button id="btn-refresh" class="p-3 rounded-lg glass"><span class="material-symbols-outlined">refresh</span></button>
+      </div>
+      <div class="text-sm text-slate-500">Local • No account</div>
+    </div>
+  </footer>
+</div>
+
+<!-- Modals and overlays (single-file) -->
+<!-- Create Unit Modal -->
+<div id="modal-create" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" data-close-modal></div>
+  <div class="relative w-full max-w-xl mx-4 sm:mx-0 bg-white dark:bg-[#07101a] rounded-2xl p-4 glass">
+    <div class="flex items-center justify-between">
+      <h3 class="text-lg font-semibold">Buat Unit Pembelajaran</h3>
+      <button data-close-modal class="p-2 rounded-md"><span class="material-symbols-outlined">close</span></button>
+    </div>
+
+    <form id="form-create" class="mt-3 space-y-3">
+      <div class="grid grid-cols-2 gap-2">
+        <label class="col-span-2">
+          <div class="text-sm font-medium mb-1">Tipe</div>
+          <select id="input-type" class="w-full rounded-lg p-2 border bg-transparent">
+            <option value="flashcard">Flashcard</option>
+            <option value="quiz">Quiz</option>
+          </select>
+        </label>
+
+        <label class="">
+          <div class="text-sm font-medium mb-1">Kategori</div>
+          <select id="input-category" class="w-full rounded-lg p-2 border bg-transparent"></select>
+        </label>
+
+        <label class="">
+          <div class="text-sm font-medium mb-1">Level (kemudahan)</div>
+          <select id="input-level" class="w-full rounded-lg p-2 border bg-transparent">
+            <option value="easy">Mudah</option>
+            <option value="medium">Menengah</option>
+            <option value="hard">Sulit</option>
+          </select>
+        </label>
+      </div>
+
+      <label>
+        <div class="text-sm font-medium mb-1">Judul</div>
+        <input id="input-title" class="w-full p-3 rounded-lg border bg-transparent" placeholder="Contoh: Revolusi Industri" required />
+      </label>
+
+      <label>
+        <div class="text-sm font-medium mb-1">Deskripsi singkat</div>
+        <textarea id="input-desc" class="w-full p-3 rounded-lg border bg-transparent" rows="2" placeholder="Deskripsi topik..."></textarea>
+      </label>
+
+      <div class="grid grid-cols-2 gap-2">
+        <label>
+          <div class="text-sm font-medium mb-1">Jumlah</div>
+          <input id="input-count" type="number" min="1" max="100" value="8" class="w-full p-3 rounded-lg border bg-transparent" />
+        </label>
+        <label>
+          <div class="text-sm font-medium mb-1">Nama paket (opsional)</div>
+          <input id="input-slug" placeholder="mis. revolusi-industri" class="w-full p-3 rounded-lg border bg-transparent" />
+        </label>
+      </div>
+
+      <div class="flex items-center gap-2 justify-end">
+        <button type="button" data-close-modal class="px-4 py-2 rounded-lg glass">Batal</button>
+        <button id="btn-create-start" class="px-4 py-2 rounded-lg bg-primary text-white font-semibold flex items-center gap-2">
+          <span class="material-symbols-outlined">bolt</span>
+          <span>Buat & Mainkan</span>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500 mt-2">Aplikasi mencoba menggunakan AI endpoint Anda untuk membuat konten. Jika API tidak merespons dengan format yang bisa dipakai, sistem akan membuat konten placeholder otomatis.</p>
+    </form>
+  </div>
+</div>
+
+<!-- Manage modal (move/delete categories/units) -->
+<div id="modal-manage" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" data-close-modal></div>
+  <div class="relative w-full max-w-2xl mx-4 sm:mx-0 bg-white dark:bg-[#07101a] rounded-2xl p-4 glass">
+    <div class="flex items-center justify-between">
+      <h3 class="text-lg font-semibold">Kelola Unit & Kategori</h3>
+      <button data-close-modal class="p-2 rounded-md"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <div id="manage-content" class="mt-3 space-y-3 max-h-[60vh] overflow-y-auto">
+      <!-- dynamic -->
+    </div>
+    <div class="flex items-center gap-2 justify-between mt-3">
+      <div class="flex gap-2">
+        <input id="new-category-name" placeholder="Nama kategori baru" class="p-2 rounded-lg border bg-transparent" />
+        <button id="create-category" class="px-3 py-2 rounded-lg bg-primary text-white">Tambah</button>
+      </div>
+      <button data-close-modal class="px-3 py-2 rounded-lg glass">Selesai</button>
+    </div>
+  </div>
+</div>
+
+<!-- Play overlays -->
+<div id="overlay-player" class="fixed inset-0 z-40 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/50" data-close-player></div>
+  <div id="player-box" class="relative w-full max-w-md mx-4 sm:mx-0 bg-white dark:bg-[#07101a] rounded-2xl p-4 glass">
+    <!-- dynamic play content -->
+  </div>
+</div>
+
+<!-- Toast / notification -->
+<div id="toast" class="fixed bottom-24 right-4 z-50 hidden">
+  <div class="bg-slate-900 text-white px-4 py-2 rounded-lg shadow">Notifikasi</div>
+</div>
+
+<script>
+/* =========================
+   Storage model
+   =========================
+   Structure stored in localStorage key `minilearn_v1`:
+   { categories: [{id, name, units: [unitId,...]}], units: { unitId: { id, type: 'flashcard'|'quiz', title, desc, count, level, cards: [...], questions: [...], categoryId, createdAt }}}
+*/
+const STORAGE_KEY = 'minilearn_v1';
+
+function uid(prefix='id') {
+  return prefix + '_' + Math.random().toString(36).slice(2,9);
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      // bootstrap default categories
+      const initial = { categories: [ {id:uid('cat'), name:'Umum', units:[] } ], units:{} };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
+      return initial;
+    }
+    return JSON.parse(raw);
+  } catch(e) {
+    console.error('loadState', e);
+    const initial = { categories: [ {id:uid('cat'), name:'Umum', units:[] } ], units:{} };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
+    return initial;
+  }
+}
+
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+/* =========================
+   UI helpers
+   ========================= */
+const el = sel => document.querySelector(sel);
+const elAll = sel => Array.from(document.querySelectorAll(sel));
+function showToast(msg, time=1800) {
+  const t = el('#toast');
+  t.firstElementChild.textContent = msg;
+  t.classList.remove('hidden');
+  setTimeout(()=> t.classList.add('hidden'), time);
+}
+
+function openModal(id) { el(id).classList.remove('hidden'); document.body.style.overflow='hidden'; }
+function closeModal(id) { el(id).classList.add('hidden'); document.body.style.overflow=''; }
+function openPlayer() { el('#overlay-player').classList.remove('hidden'); document.body.style.overflow='hidden'; }
+function closePlayer() { el('#overlay-player').classList.add('hidden'); document.body.style.overflow=''; }
+
+/* =========================
+   API call helper (uses taraka endpoint example)
+   If it fails or returns non-structured content, fallback generator used.
+   ========================= */
+async function callAI(prompt, system="You are a helpful assistant.") {
+  const endpoint = 'https://taraka.id/apigate/index.php';
+  try {
+    const res = await fetch(endpoint, {
+      method:'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ prompt, system })
+    });
+    const text = await res.text();
+    // Try to parse JSON if possible
+    try {
+      return JSON.parse(text);
+    } catch(_) {
+      // return raw text
+      return text;
+    }
+  } catch(err) {
+    console.warn('AI call failed', err);
+    return null;
+  }
+}
+
+/* =========================
+   Generators fallback (when API not formatted)
+   ========================= */
+function generateFlashcardsFallback(title, desc, count, level) {
+  const cards = [];
+  for (let i=1;i<=count;i++){
+    cards.push({
+      id: uid('card'),
+      front: `${title} — Istilah ${i}`,
+      back: `Penjelasan singkat (${level}) untuk istilah ${i}. ${desc ? desc.slice(0,80) : ''}`
+    });
+  }
+  return cards;
+}
+
+function generateQuizFallback(title, desc, count, level) {
+  const questions = [];
+  for (let i=1;i<=count;i++){
+    const correct = `Jawaban benar ${i}`;
+    const wrongA = `Pilihan salah A${i}`;
+    const wrongB = `Pilihan salah B${i}`;
+    const wrongC = `Pilihan salah C${i}`;
+    const choices = shuffleArray([correct, wrongA, wrongB, wrongC]);
+    questions.push({
+      id: uid('q'),
+      question: `${title}: Pertanyaan contoh ${i} (${level})`,
+      choices,
+      answer: correct
+    });
+  }
+  return questions;
+}
+
+function shuffleArray(a){ return a.slice().sort(()=>Math.random()-0.5); }
+
+/* =========================
+   Core app
+   ========================= */
+let state = loadState();
+
+function renderCategories() {
+  const cont = el('#categories');
+  cont.innerHTML = '';
+  const cats = state.categories;
+  if (!cats.length) {
+    el('#empty-state').classList.remove('hidden');
+    return;
+  } else {
+    el('#empty-state').classList.add('hidden');
+  }
+
+  cats.forEach(cat=>{
+    const s = document.createElement('div');
+    s.className = 'category';
+    s.innerHTML = `
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-base font-semibold">${escapeHtml(cat.name)}</h2>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-slate-500">${cat.units.length} unit</span>
+          <button data-cat="${cat.id}" class="open-cat p-2 rounded-md glass"><span class="material-symbols-outlined">more_vert</span></button>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        ${cat.units.map(uid=>{
+          const u = state.units[uid];
+          if (!u) return '';
+          return `
+            <div class="rounded-xl p-3 bg-white dark:bg-[#071826] shadow flex flex-col justify-between" data-unit="${u.id}">
+              <div>
+                <div class="flex items-start justify-between gap-2">
+                  <div class="text-sm font-medium">${escapeHtml(u.title)}</div>
+                  <div class="text-xs text-slate-500">${u.type === 'flashcard' ? 'Flashcard' : 'Kuis'}</div>
+                </div>
+                <p class="mt-2 text-xs text-slate-500 truncate">${escapeHtml(u.desc || '')}</p>
+              </div>
+              <div class="mt-3 flex items-center gap-2 justify-between">
+                <div class="text-xs text-slate-500">${u.count} &middot; ${u.level}</div>
+                <div class="flex items-center gap-2">
+                  <button class="play-unit p-2 rounded-lg bg-primary text-white" data-unit="${u.id}"><span class="material-symbols-outlined">play_arrow</span></button>
+                  <button class="more-unit p-2 rounded-lg glass" data-unit="${u.id}"><span class="material-symbols-outlined">more_horiz</span></button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+    cont.appendChild(s);
+  });
+
+  // attach listeners
+  elAll('.play-unit').forEach(b=>{
+    b.onclick = (ev)=> {
+      const id = b.dataset.unit;
+      playUnit(id);
+    };
+  });
+  elAll('.more-unit').forEach(b=>{
+    b.onclick = (ev)=> {
+      const id = b.dataset.unit;
+      openManageForUnit(id);
+    };
+  });
+  elAll('.open-cat').forEach(b=>{
+    b.onclick = ()=> openManageForCategory(b.dataset.cat);
+  });
+}
+
+/* escape */
+function escapeHtml(str='') {
+  return String(str).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+}
+
+/* =========================
+   Manage modal content
+   ========================= */
+function openManageForUnit(unitId) {
+  openModal('#modal-manage');
+  renderManage();
+  // highlight unit
+  setTimeout(()=> {
+    const box = el(`#manage-content [data-unit="${unitId}"]`);
+    if (box) box.scrollIntoView({behavior:'smooth', block:'center'});
+  },300);
+}
+
+function openManageForCategory(catId) {
+  openModal('#modal-manage');
+  renderManage();
+  setTimeout(()=> {
+    const box = el(`#manage-content [data-cat="${catId}"]`);
+    if (box) box.scrollIntoView({behavior:'smooth', block:'center'});
+  },300);
+}
+
+function renderManage() {
+  const box = el('#manage-content');
+  box.innerHTML = '';
+  // categories with their units
+  state.categories.forEach(cat=>{
+    const c = document.createElement('div');
+    c.className = 'p-3 rounded-xl bg-slate-50 dark:bg-[#081420]';
+    c.dataset.cat = cat.id;
+    c.innerHTML = `
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <div class="font-medium">${escapeHtml(cat.name)}</div>
+          <div class="text-xs text-slate-500">${cat.units.length} unit</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="rename-cat p-2 rounded-md glass text-sm">Ubah</button>
+          <button class="delete-cat p-2 rounded-md glass text-sm">Hapus</button>
+        </div>
+      </div>
+      <div class="mt-3 space-y-2">
+        ${cat.units.map(uId=>{
+          const u = state.units[uId];
+          if (!u) return '';
+          return `
+            <div class="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#081b2a]" data-unit="${u.id}">
+              <div class="text-sm">${escapeHtml(u.title)}</div>
+              <div class="flex items-center gap-2">
+                <select class="move-to-cat p-1 rounded" data-unit="${u.id}">
+                  ${state.categories.map(cc=>`<option value="${cc.id}" ${cc.id===cat.id?'selected':''}>${escapeHtml(cc.name)}</option>`).join('')}
+                </select>
+                <button class="delete-unit p-1 rounded glass text-sm" data-unit="${u.id}">Hapus</button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+    box.appendChild(c);
+  });
+
+  // listeners inside
+  elAll('#manage-content .delete-cat').forEach(btn=>{
+    btn.onclick = ()=> {
+      const parent = btn.closest('[data-cat]');
+      const catId = parent.dataset.cat;
+      if (!confirm('Hapus kategori ini dan semua unit di dalamnya?')) return;
+      // remove units
+      const cat = state.categories.find(c=>c.id===catId);
+      cat.units.forEach(uId=> delete state.units[uId]);
+      // remove category
+      state.categories = state.categories.filter(c=>c.id !== catId);
+      saveState(state);
+      renderCategories();
+      renderManage();
+      showToast('Kategori dihapus');
+    };
+  });
+
+  elAll('#manage-content .rename-cat').forEach(btn=>{
+    btn.onclick = ()=> {
+      const parent = btn.closest('[data-cat]');
+      const catId = parent.dataset.cat;
+      const newName = prompt('Nama baru untuk kategori', state.categories.find(c=>c.id===catId).name);
+      if (!newName) return;
+      state.categories.find(c=>c.id===catId).name = newName;
+      saveState(state);
+      renderCategories();
+      renderManage();
+      showToast('Nama kategori diperbarui');
+    };
+  });
+
+  elAll('#manage-content .delete-unit').forEach(btn=>{
+    btn.onclick = ()=> {
+      const id = btn.dataset.unit;
+      if (!confirm('Hapus unit ini?')) return;
+      // remove reference in categories
+      state.categories.forEach(c=> c.units = c.units.filter(u=>u!==id));
+      delete state.units[id];
+      saveState(state);
+      renderCategories();
+      renderManage();
+      showToast('Unit dihapus');
+    };
+  });
+
+  elAll('#manage-content .move-to-cat').forEach(sel=>{
+    sel.onchange = ()=>{
+      const uId = sel.dataset.unit;
+      const targetCat = sel.value;
+      // remove reference from previous
+      state.categories.forEach(c=> {
+        if (c.units.includes(uId)) c.units = c.units.filter(x=>x!==uId);
+      });
+      const cat = state.categories.find(c=>c.id===targetCat);
+      if (cat) cat.units.push(uId);
+      state.units[uId].categoryId = targetCat;
+      saveState(state);
+      renderCategories();
+      renderManage();
+      showToast('Unit dipindahkan');
+    };
+  });
+}
+
+/* =========================
+   Create flow (form submit)
+   ========================= */
+el('#btn-new').onclick = () => {
+  openModal('#modal-create'); populateCategorySelect();
+};
+el('#empty-create').onclick = ()=> { openModal('#modal-create'); populateCategorySelect(); };
+
+elAll('[data-close-modal]').forEach(b => b.addEventListener('click', ()=> {
+  closeModal('#modal-create'); closeModal('#modal-manage');
+}));
+
+function populateCategorySelect() {
+  const sel = el('#input-category');
+  sel.innerHTML = state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  const createInput = el('#input-slug');
+  createInput.value = '';
+}
+
+el('#form-create').addEventListener('submit', e=> e.preventDefault());
+
+el('#btn-create-start').onclick = async function() {
+  const type = el('#input-type').value;
+  const title = el('#input-title').value.trim();
+  const desc = el('#input-desc').value.trim();
+  const count = Math.max(1, Math.min(100, parseInt(el('#input-count').value||8)));
+  const level = el('#input-level').value;
+  const slug = el('#input-slug').value.trim();
+  const cat = el('#input-category').value;
+
+  if (!title) { alert('Isi judul terlebih dahulu'); return; }
+
+  const unitId = uid('unit');
+  const newUnit = {
+    id: unitId,
+    type,
+    title,
+    desc,
+    count,
+    level,
+    createdAt: Date.now(),
+    categoryId: cat
+  };
+  state.units[unitId] = newUnit;
+  const categoryObj = state.categories.find(c=>c.id===cat);
+  if (!categoryObj) {
+    const newCat = { id: uid('cat'), name: 'Umum', units: [unitId] };
+    state.categories.push(newCat);
+  } else {
+    categoryObj.units.push(unitId);
+  }
+  saveState(state);
+  renderCategories();
+  closeModal('#modal-create');
+
+  // show player and loading indicator
+  openPlayer();
+  renderPlayerLoading('Membuat konten (AI)...');
+
+  // prepare prompt
+  let prompt;
+  if (type === 'flashcard') {
+    prompt = `Buat ${count} flashcards untuk topik "${title}". Level: ${level}. Deskripsi: ${desc}. Output harus berupa JSON: {"cards": [{"front": "...", "back":"..."} , ...]}`;
+  } else {
+    prompt = `Buat ${count} soal pilihan berganda untuk topik "${title}". Level: ${level}. Deskripsi: ${desc}. Output harus berupa JSON: {"questions": [{"question":"...", "choices":["..."], "answer":"..."} , ...]}`;
+  }
+
+  // call AI
+  const aiResp = await callAI(prompt, "Jawab dengan format JSON jika memungkinkan.");
+  let parsed = null;
+  if (typeof aiResp === 'object' && aiResp !== null) {
+    parsed = aiResp;
+  } else if (typeof aiResp === 'string') {
+    // try parse JSON inside string
+    try {
+      parsed = JSON.parse(aiResp);
+    } catch(e) {
+      // attempt to find JSON substring
+      const jsonMatch = aiResp.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { parsed = JSON.parse(jsonMatch[0]); } catch(e2) { parsed = null; }
+      }
+    }
+  }
+
+  // apply to unit
+  if (type === 'flashcard') {
+    if (parsed && parsed.cards && Array.isArray(parsed.cards)) {
+      newUnit.cards = parsed.cards.map(c=>({ id: uid('card'), front: c.front||c.q||c.term||'', back: c.back||c.a||c.answer||'' }));
+    } else {
+      newUnit.cards = generateFlashcardsFallback(title, desc, count, level);
+    }
+    saveState(state);
+    renderPlayerFlashcard(newUnit);
+  } else {
+    if (parsed && parsed.questions && Array.isArray(parsed.questions)) {
+      newUnit.questions = parsed.questions.map(q=>({
+        id: uid('q'),
+        question: q.question||q.q||'',
+        choices: (q.choices || q.options || []).slice(0,4),
+        answer: q.answer || q.correct || ''
+      }));
+    } else {
+      newUnit.questions = generateQuizFallback(title, desc, count, level);
+    }
+    saveState(state);
+    renderPlayerQuiz(newUnit);
+  }
+};
+
+/* =========================
+   Player: loading, flashcard, quiz renderers
+   ========================= */
+function renderPlayerLoading(msg='Loading...') {
+  const box = el('#player-box');
+  box.innerHTML = `
+    <div class="flex flex-col items-center p-6">
+      <div class="spinner mb-4"></div>
+      <div class="text-sm text-slate-600 dark:text-slate-300">${escapeHtml(msg)}</div>
+      <div class="mt-4"><button class="px-3 py-2 rounded-lg glass" data-close-player>Batal</button></div>
+    </div>
+  `;
+  el('#overlay-player').classList.remove('hidden');
+  elAll('[data-close-player]').forEach(b=>b.onclick=closePlayer);
+}
+
+function renderPlayerFlashcard(unit) {
+  const cards = unit.cards || [];
+  let idx = 0;
+  const box = el('#player-box');
+  function update() {
+    const card = cards[idx];
+    box.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-slate-500">${escapeHtml(unit.title)}</div>
+        <div class="text-xs text-slate-500">${idx+1}/${cards.length}</div>
+      </div>
+      <div class="mt-3 flip-card relative w-full h-[56vw] max-h-[32rem]">
+        <div class="flip-inner relative w-full h-full rounded-xl shadow-lg overflow-hidden ${card && card.__flipped ? 'flipped' : ''}" id="flip-inner">
+          <div class="flip-front p-6 bg-white dark:bg-[#0f1b26] flex flex-col items-center justify-center text-center">
+            <div class="text-xl font-semibold">${escapeHtml(card.front)}</div>
+            <div class="text-xs text-slate-500 mt-4">Ketuk kartu untuk melihat jawaban</div>
+          </div>
+          <div class="flip-back p-6 bg-white dark:bg-[#071722] text-center">
+            <div class="text-xl font-semibold">${escapeHtml(card.back)}</div>
+            <div class="text-xs text-slate-400 mt-3">Sumber: AI / placeholder</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between gap-2">
+        <button id="prev-card" class="btn-lg glass flex items-center gap-2"><span class="material-symbols-outlined">chevron_left</span> Sebelumnya</button>
+        <div class="flex gap-2">
+          <button id="shuffle-cards" class="btn-lg glass">Acak</button>
+          <button id="flip-card" class="btn-lg bg-primary text-white">Balik</button>
+        </div>
+        <button id="next-card" class="btn-lg glass flex items-center gap-2">Selanjutnya <span class="material-symbols-outlined">chevron_right</span></button>
+      </div>
+      <div class="mt-3 text-right">
+        <button class="px-3 py-2 rounded-lg glass" data-close-player>Keluar</button>
+      </div>
+    `;
+    // attach events
+    el('#flip-inner').onclick = ()=> {
+      card.__flipped = !card.__flipped;
+      const inner = el('#flip-inner');
+      if (card.__flipped) inner.classList.add('flipped'); else inner.classList.remove('flipped');
+    };
+    el('#flip-card').onclick = ()=> {
+      card.__flipped = !card.__flipped;
+      const inner = el('#flip-inner');
+      if (card.__flipped) inner.classList.add('flipped'); else inner.classList.remove('flipped');
+    };
+    el('#prev-card').onclick = ()=> { idx = Math.max(0, idx-1); update(); };
+    el('#next-card').onclick = ()=> { idx = Math.min(cards.length-1, idx+1); update(); };
+    el('#shuffle-cards').onclick = ()=> { shuffleCards(); };
+    elAll('[data-close-player]').forEach(b=>b.onclick=closePlayer);
+  }
+
+  function shuffleCards() {
+    const shuffled = shuffleArray(cards);
+    state.units[unit.id].cards = shuffled;
+    saveState(state);
+    // reset idx and update
+    idx = 0;
+    update();
+  }
+
+  openPlayer(); update();
+}
+
+function renderPlayerQuiz(unit) {
+  const qs = unit.questions || [];
+  let idx = 0;
+  const userAnswers = {};
+  const box = el('#player-box');
+
+  function update() {
+    const q = qs[idx];
+    box.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-slate-500">${escapeHtml(unit.title)}</div>
+        <div class="text-xs text-slate-500">${idx+1}/${qs.length}</div>
+      </div>
+
+      <div class="mt-3 p-4 bg-white dark:bg-[#071722] rounded-xl">
+        <div class="text-lg font-semibold">${escapeHtml(q.question)}</div>
+        <div class="mt-3 space-y-2" id="choices">
+          ${q.choices.map((ch,i)=>`
+            <label class="flex items-center justify-between p-3 rounded-lg border cursor-pointer">
+              <div class="text-sm">${escapeHtml(ch)}</div>
+              <input type="radio" name="choice" value="${escapeHtml(ch)}" ${userAnswers[q.id]===ch?'checked':''} class="h-4 w-4"/>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center gap-2 justify-between">
+        <button id="prev-q" class="btn-lg glass">Sebelumnya</button>
+        <div class="flex gap-2">
+          <button id="check-q" class="btn-lg bg-primary text-white">Periksa</button>
+          <button id="skip-q" class="btn-lg glass">Lewati</button>
+        </div>
+        <button id="next-q" class="btn-lg glass">Selanjutnya</button>
+      </div>
+
+      <div class="mt-3 text-right">
+        <button class="px-3 py-2 rounded-lg glass" data-close-player>Keluar</button>
+      </div>
+    `;
+    // events
+    el('#prev-q').onclick = ()=> { idx = Math.max(0, idx-1); update(); };
+    el('#next-q').onclick = ()=> { idx = Math.min(qs.length-1, idx+1); update(); };
+    el('#skip-q').onclick = ()=> { idx = Math.min(qs.length-1, idx+1); update(); };
+    el('#check-q').onclick = ()=> {
+      const checked = box.querySelector('input[name="choice"]:checked');
+      if (!checked) { showToast('Pilih jawaban dulu'); return; }
+      userAnswers[q.id] = checked.value;
+      const correct = q.answer;
+      if (checked.value === correct) {
+        showToast('Benar! ✅', 1200);
+        // highlight green
+        highlightChoice(checked.closest('label'), true);
+      } else {
+        showToast('Salah ❌', 1200);
+        highlightChoice(checked.closest('label'), false);
+        // show correct choice visually
+        setTimeout(()=> revealCorrect(), 100);
+      }
+    };
+    elAll('[data-close-player]').forEach(b=>b.onclick=closePlayer);
+  }
+
+  function highlightChoice(label, ok) {
+    label.style.backgroundColor = ok ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.06)';
+    label.style.borderColor = ok ? '#16a34a' : '#ef4444';
+  }
+  function revealCorrect(){
+    const q = qs[idx];
+    const labels = box.querySelectorAll('#choices label');
+    labels.forEach(l=>{
+      if (l.textContent.trim() === q.answer) {
+        l.style.backgroundColor = 'rgba(34,197,94,0.08)';
+        l.style.borderColor = '#16a34a';
+      }
+    });
+  }
+
+  openPlayer(); update();
+}
+
+/* =========================
+   Utilities + init
+   ========================= */
+function ensureCategoryExists(name='Umum') {
+  if (!state.categories.length) {
+    const c = { id: uid('cat'), name, units: [] };
+    state.categories.push(c);
+    saveState(state);
+  }
+}
+
+function renderInitial() {
+  ensureCategoryExists();
+  renderCategories();
+}
+
+renderInitial();
+
+/* =========================
+   Misc. event wiring
+   ========================= */
+el('#btn-manage').onclick = ()=> { openModal('#modal-manage'); renderManage(); };
+el('#btn-refresh').onclick = ()=> { state = loadState(); renderCategories(); showToast('Disinkron (local)'); };
+
+el('#toggle-theme').onclick = ()=>{
+  document.documentElement.classList.toggle('dark');
+  showToast('Tema diubah');
+};
+
+/* create-category in manage modal */
+el('#create-category').onclick = ()=>{
+  const name = el('#new-category-name').value.trim();
+  if (!name) { alert('Isi nama kategori'); return; }
+  const c = { id: uid('cat'), name, units: [] };
+  state.categories.push(c);
+  saveState(state);
+  el('#new-category-name').value = '';
+  renderManage();
+  renderCategories();
+  showToast('Kategori dibuat');
+};
+
+/* page-level clicks to open or play unit by clicking card */
+document.addEventListener('click', (ev)=>{
+  const uel = ev.target.closest('[data-unit]');
+  if (!uel) return;
+  // handled by specific buttons already
+});
+
+/* helper to create sample demo data if empty for first use (optional) */
+if (Object.keys(state.units).length === 0) {
+  // create a sample flashcard or leave empty to keep user-driven creation
+  // comment out if not wanted
+  const sId = uid('unit');
+  state.units[sId] = {
+    id:sId, type:'flashcard', title:'Contoh: Ibu Kota Indonesia', desc:'Contoh flashcard sederhana', count:3, level:'easy', categoryId: state.categories[0].id,
+    cards: [
+      {id: uid('card'), front:'Apa ibu kota Indonesia?', back:'Jakarta'},
+      {id: uid('card'), front:'Pulau terbesar di Indonesia?', back:'Kalimantan'},
+      {id: uid('card'), front:'Bahasa resmi?', back:'Bahasa Indonesia'}
+    ]
+  };
+  state.categories[0].units.push(sId);
+  saveState(state);
+  renderCategories();
+}
+
+/* keyboard accessibility: Esc closes modals */
+document.addEventListener('keydown', (e)=> {
+  if (e.key === 'Escape') {
+    closeModal('#modal-create'); closeModal('#modal-manage'); closePlayer();
+  }
+});
+</script>
+</body>
+</html>
