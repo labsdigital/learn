@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html class="dark" lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EduLearn - Flashcard & Quiz</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "primary": "#258cf4",
+        "background-light": "#f5f7f8",
+        "background-dark": "#101922",
+        "success": "#2ECC71",
+        "error": "#E74C3C"
+      },
+      fontFamily: {
+        "display": ["Lexend", "sans-serif"]
+      }
+    }
+  }
+}
+</script>
+<style>
+body { 
+  -webkit-font-smoothing: antialiased; 
+  -moz-osx-font-smoothing: grayscale;
+  font-family: 'Lexend', sans-serif;
+  min-height: 100dvh;
+}
+.flip-card { 
+  transform-style: preserve-3d; 
+  transition: transform 0.6s;
+}
+.flip-card.flipped { transform: rotateY(180deg); }
+.flip-card-front, .flip-card-back { 
+  backface-visibility: hidden; 
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.flip-card-back { transform: rotateY(180deg); }
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+</style>
+</head>
+<body class="bg-background-light dark:bg-background-dark">
+<div id="app"></div>
+
+<script>
+const app = {
+  currentView: 'home',
+  categories: [],
+  currentUnit: null,
+  currentIndex: 0,
+  selectedAnswer: null,
+  quizResults: [],
+  isFlipped: false,
+  isLoading: false,
+  showModal: false,
+  modalType: '',
+  formData: {},
+
+  async init() {
+    await this.loadData();
+    this.render();
+  },
+
+  async loadData() {
+    try {
+      const stored = localStorage.getItem('edu-categories');
+      if (stored) {
+        this.categories = JSON.parse(stored);
+      }
+    } catch (e) {
+      this.categories = [];
+    }
+  },
+
+  async saveData() {
+    try {
+      localStorage.setItem('edu-categories', JSON.stringify(this.categories));
+    } catch (e) {
+      console.error('Error saving data:', e);
+    }
+  },
+
+  async callAI(prompt, system = 'Jawab dengan format JSON yang valid.') {
+    try {
+      const response = await fetch('https://taraka.id/apigate/index.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, system })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      // Remove quotes if response is wrapped in them
+      return text.replace(/^"|"$/g, '');
+    } catch (error) {
+      console.error('API call failed:', error);
+      throw error;
+    }
+  },
+
+  async generateFlashcards(topic, description, count, level) {
+    this.isLoading = true;
+    this.render();
+
+    try {
+      const prompt = `Buatkan ${count} flashcard untuk topik "${topic}" dengan deskripsi: ${description}. Level kesulitan: ${level}.
+      
+Format JSON (array of objects):
+[
+  {"front": "Pertanyaan atau istilah", "back": "Jawaban atau penjelasan"}
+]
+
+Pastikan konten sesuai level ${level} dan relevan dengan topik.`;
+
+      const result = await this.callAI(prompt);
+      const cards = JSON.parse(result);
+      
+      const unit = {
+        id: Date.now(),
+        type: 'flashcard',
+        title: topic,
+        description: description,
+        level: level,
+        category: this.formData.category || 'Umum',
+        cards: cards,
+        createdAt: new Date().toISOString()
+      };
+
+      const categoryIndex = this.categories.findIndex(c => c.name === unit.category);
+      if (categoryIndex === -1) {
+        this.categories.push({ name: unit.category, units: [unit] });
+      } else {
+        this.categories[categoryIndex].units.push(unit);
+      }
+
+      await this.saveData();
+      this.showModal = false;
+      this.currentView = 'home';
+      this.isLoading = false;
+      this.render();
+    } catch (e) {
+      console.error('Error generating flashcards:', e);
+      alert('Gagal membuat flashcard. Pastikan koneksi internet Anda stabil dan coba lagi.');
+      this.isLoading = false;
+      this.render();
+    }
+  },
+
+  async generateQuiz(topic, description, count, level) {
+    this.isLoading = true;
+    this.render();
+
+    try {
+      const prompt = `Buatkan ${count} soal pilihan ganda untuk topik "${topic}" dengan deskripsi: ${description}. Level kesulitan: ${level}.
+
+Format JSON (array of objects):
+[
+  {
+    "question": "Soal",
+    "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],
+    "correct": 0
+  }
+]
+
+correct adalah index jawaban benar (0-3). Pastikan soal berkualitas sesuai level ${level}.`;
+
+      const result = await this.callAI(prompt);
+      const questions = JSON.parse(result);
+      
+      const unit = {
+        id: Date.now(),
+        type: 'quiz',
+        title: topic,
+        description: description,
+        level: level,
+        category: this.formData.category || 'Umum',
+        questions: questions,
+        createdAt: new Date().toISOString()
+      };
+
+      const categoryIndex = this.categories.findIndex(c => c.name === unit.category);
+      if (categoryIndex === -1) {
+        this.categories.push({ name: unit.category, units: [unit] });
+      } else {
+        this.categories[categoryIndex].units.push(unit);
+      }
+
+      await this.saveData();
+      this.showModal = false;
+      this.currentView = 'home';
+      this.isLoading = false;
+      this.render();
+    } catch (e) {
+      console.error('Error generating quiz:', e);
+      alert('Gagal membuat quiz. Pastikan koneksi internet Anda stabil dan coba lagi.');
+      this.isLoading = false;
+      this.render();
+    }
+  },
+
+  deleteUnit(categoryName, unitId) {
+    if (confirm('Apakah Anda yakin ingin menghapus unit ini?')) {
+      const categoryIndex = this.categories.findIndex(c => c.name === categoryName);
+      if (categoryIndex !== -1) {
+        this.categories[categoryIndex].units = this.categories[categoryIndex].units.filter(u => u.id !== unitId);
+        if (this.categories[categoryIndex].units.length === 0) {
+          this.categories.splice(categoryIndex, 1);
+        }
+        this.saveData();
+        this.render();
+      }
+    }
+  },
+
+  playUnit(unit) {
+    this.currentUnit = unit;
+    this.currentIndex = 0;
+    this.selectedAnswer = null;
+    this.quizResults = [];
+    this.isFlipped = false;
+    this.currentView = unit.type === 'flashcard' ? 'flashcard' : 'quiz';
+    this.render();
+  },
+
+  nextCard() {
+    if (this.currentIndex < this.currentUnit.cards.length - 1) {
+      this.currentIndex++;
+      this.isFlipped = false;
+      this.render();
+    }
+  },
+
+  prevCard() {
+    if (this.currentIndex > 0) {
+      this.currentIndex--;
+      this.isFlipped = false;
+      this.render();
+    }
+  },
+
+  shuffleCards() {
+    this.currentUnit.cards.sort(() => Math.random() - 0.5);
+    this.currentIndex = 0;
+    this.isFlipped = false;
+    this.render();
+  },
+
+  flipCard() {
+    this.isFlipped = !this.isFlipped;
+    this.render();
+  },
+
+  selectAnswer(index) {
+    this.selectedAnswer = index;
+    this.render();
+  },
+
+  checkAnswer() {
+    const question = this.currentUnit.questions[this.currentIndex];
+    const isCorrect = this.selectedAnswer === question.correct;
+    this.quizResults.push(isCorrect);
+    
+    setTimeout(() => {
+      if (this.currentIndex < this.currentUnit.questions.length - 1) {
+        this.currentIndex++;
+        this.selectedAnswer = null;
+        this.render();
+      } else {
+        this.showQuizResults();
+      }
+    }, 1500);
+    
+    this.render();
+  },
+
+  showQuizResults() {
+    const correct = this.quizResults.filter(r => r).length;
+    const total = this.quizResults.length;
+    const percentage = Math.round((correct / total) * 100);
+    
+    alert(`Quiz Selesai!\n\nBenar: ${correct}/${total}\nSkor: ${percentage}%`);
+    this.currentView = 'home';
+    this.render();
+  },
+
+  prevQuestion() {
+    if (this.currentIndex > 0) {
+      this.currentIndex--;
+      this.selectedAnswer = null;
+      this.render();
+    }
+  },
+
+  render() {
+    const appDiv = document.getElementById('app');
+    appDiv.innerHTML = this[`render${this.currentView.charAt(0).toUpperCase() + this.currentView.slice(1)}`]();
+    this.attachListeners();
+  },
+
+  renderHome() {
+    const hasUnits = this.categories.some(cat => cat.units.length > 0);
+    
+    return `
+      <div class="relative flex min-h-screen w-full flex-col">
+        <div class="sticky top-0 z-10 flex items-center justify-between gap-4 bg-background-light/80 dark:bg-background-dark/80 px-4 py-3 backdrop-blur-sm">
+          <button class="flex size-10 shrink-0 items-center justify-center rounded-full text-zinc-900 dark:text-white">
+            <span class="material-symbols-outlined text-2xl">search</span>
+          </button>
+          <h1 class="flex-1 text-center text-lg font-bold tracking-tight text-zinc-900 dark:text-white">Unit Pembelajaran Saya</h1>
+          <button class="flex size-10 shrink-0 items-center justify-center rounded-full text-zinc-900 dark:text-white">
+            <span class="material-symbols-outlined text-2xl">filter_list</span>
+          </button>
+        </div>
+
+        <main class="flex-1 px-4 py-4 pb-24">
+          ${this.categories.map(category => `
+            <div class="mb-8">
+              <h2 class="text-zinc-900 dark:text-white text-lg font-bold pb-3 pt-2">${category.name}</h2>
+              <div class="flex flex-col gap-3">
+                ${category.units.map(unit => `
+                  <div class="flex items-center gap-4 rounded-xl bg-white dark:bg-zinc-800/50 p-3 shadow-sm">
+                    <div class="flex shrink-0 size-12 items-center justify-center rounded-lg bg-primary/20 text-primary">
+                      <span class="material-symbols-outlined text-2xl">${unit.type === 'flashcard' ? 'style' : 'quiz'}</span>
+                    </div>
+                    <div class="flex flex-1 flex-col justify-center overflow-hidden" onclick="app.playUnit(${JSON.stringify(unit).replace(/"/g, '&quot;')})">
+                      <p class="truncate text-base font-medium text-zinc-900 dark:text-white">${unit.type === 'flashcard' ? 'Flashcard' : 'Kuis'}: ${unit.title}</p>
+                      <p class="truncate text-sm text-zinc-500 dark:text-zinc-400">${unit.type === 'flashcard' ? unit.cards.length + ' kartu' : unit.questions.length + ' soal'}</p>
+                    </div>
+                    <button class="shrink-0" onclick="event.stopPropagation(); app.deleteUnit('${category.name}', ${unit.id})">
+                      <span class="material-symbols-outlined text-xl text-zinc-500 dark:text-zinc-400">delete</span>
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+
+          ${!hasUnits ? `
+            <div class="mt-12">
+              <div class="flex flex-col items-center justify-center rounded-xl bg-white/50 dark:bg-zinc-800/30 p-8 text-center">
+                <div class="flex size-16 items-center justify-center rounded-full bg-primary/20 text-primary mb-4">
+                  <span class="material-symbols-outlined text-4xl">add_box</span>
+                </div>
+                <h3 class="text-base font-bold text-zinc-900 dark:text-white">Anda belum punya unit</h3>
+                <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Yuk, buat flashcard atau kuis pertama Anda sekarang!</p>
+              </div>
+            </div>
+          ` : ''}
+        </main>
+
+        <button class="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg z-20" onclick="app.showCreateMenu()">
+          <span class="material-symbols-outlined text-3xl">add</span>
+        </button>
+
+        ${this.showModal ? this.renderModal() : ''}
+      </div>
+    `;
+  },
+
+  showCreateMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'fixed inset-0 bg-black/50 z-30 flex items-end';
+    menu.innerHTML = `
+      <div class="bg-white dark:bg-zinc-800 w-full rounded-t-2xl p-6 animate-slide-up">
+        <h3 class="text-lg font-bold text-zinc-900 dark:text-white mb-4">Buat Unit Baru</h3>
+        <div class="flex flex-col gap-3">
+          <button onclick="app.openModal('flashcard')" class="flex items-center gap-4 p-4 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+            <span class="material-symbols-outlined text-3xl">style</span>
+            <div class="text-left">
+              <p class="font-semibold">Flashcard</p>
+              <p class="text-sm opacity-80">Buat kartu pembelajaran</p>
+            </div>
+          </button>
+          <button onclick="app.openModal('quiz')" class="flex items-center gap-4 p-4 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+            <span class="material-symbols-outlined text-3xl">quiz</span>
+            <div class="text-left">
+              <p class="font-semibold">Quiz</p>
+              <p class="text-sm opacity-80">Buat soal latihan</p>
+            </div>
+          </button>
+          <button onclick="this.parentElement.parentElement.parentElement.remove()" class="p-4 rounded-xl bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white font-semibold">
+            Batal
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(menu);
+  },
+
+  openModal(type) {
+    document.querySelector('.fixed.inset-0')?.remove();
+    this.modalType = type;
+    this.showModal = true;
+    this.formData = {};
+    this.render();
+  },
+
+  renderModal() {
+    return `
+      <div class="fixed inset-0 bg-black/50 z-30 flex items-center justify-center p-4" onclick="if(event.target === this) { app.showModal = false; app.render(); }">
+        <div class="bg-white dark:bg-zinc-800 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <h3 class="text-xl font-bold text-zinc-900 dark:text-white mb-4">
+            Buat ${this.modalType === 'flashcard' ? 'Flashcard' : 'Quiz'} Baru
+          </h3>
+          
+          ${this.isLoading ? `
+            <div class="flex flex-col items-center justify-center py-8">
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+              <p class="text-zinc-600 dark:text-zinc-400">Sedang membuat ${this.modalType}...</p>
+            </div>
+          ` : `
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Judul Topik</label>
+                <input type="text" id="topic" class="w-full px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white border-0 focus:ring-2 focus:ring-primary" placeholder="Contoh: Sejarah Indonesia">
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Deskripsi</label>
+                <textarea id="description" rows="3" class="w-full px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white border-0 focus:ring-2 focus:ring-primary" placeholder="Jelaskan topik secara singkat"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Kategori</label>
+                <input type="text" id="category" class="w-full px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white border-0 focus:ring-2 focus:ring-primary" placeholder="Contoh: Sejarah">
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Jumlah ${this.modalType === 'flashcard' ? 'Kartu' : 'Soal'}</label>
+                <input type="number" id="count" value="10" min="5" max="50" class="w-full px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white border-0 focus:ring-2 focus:ring-primary">
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Level Kesulitan</label>
+                <select id="level" class="w-full px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white border-0 focus:ring-2 focus:ring-primary">
+                  <option value="mudah">Mudah</option>
+                  <option value="sedang" selected>Sedang</option>
+                  <option value="sulit">Sulit</option>
+                </select>
+              </div>
+
+              <div class="flex gap-3 pt-4">
+                <button onclick="app.showModal = false; app.render();" class="flex-1 py-3 rounded-xl bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white font-semibold">
+                  Batal
+                </button>
+                <button onclick="app.submitForm()" class="flex-1 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90">
+                  Buat
+                </button>
+              </div>
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+  },
+
+  submitForm() {
+    const topic = document.getElementById('topic').value;
+    const description = document.getElementById('description').value;
+    const category = document.getElementById('category').value;
+    const count = parseInt(document.getElementById('count').value);
+    const level = document.getElementById('level').value;
+
+    if (!topic || !description) {
+      alert('Mohon isi semua field');
+      return;
+    }
+
+    this.formData.category = category || 'Umum';
+
+    if (this.modalType === 'flashcard') {
+      this.generateFlashcards(topic, description, count, level);
+    } else {
+      this.generateQuiz(topic, description, count, level);
+    }
+  },
+
+  renderFlashcard() {
+    const card = this.currentUnit.cards[this.currentIndex];
+    const progress = ((this.currentIndex + 1) / this.currentUnit.cards.length) * 100;
+
+    return `
+      <div class="relative flex h-screen w-full flex-col">
+        <header class="flex items-center p-4 pb-2 justify-between bg-background-light dark:bg-background-dark">
+          <button onclick="app.currentView = 'home'; app.render();" class="flex items-center justify-center h-10 w-10 text-slate-800 dark:text-white">
+            <span class="material-symbols-outlined text-2xl">arrow_back</span>
+          </button>
+          <h1 class="text-slate-800 dark:text-white text-lg font-bold flex-1 text-center">${this.currentUnit.title}</h1>
+          <div class="w-10"></div>
+        </header>
+
+        <div class="flex flex-col gap-2 px-4 py-2">
+          <div class="flex gap-6 justify-end">
+            <p class="text-slate-500 dark:text-slate-400 text-sm">${this.currentIndex + 1}/${this.currentUnit.cards.length}</p>
+          </div>
+          <div class="rounded-full bg-slate-200 dark:bg-slate-700">
+            <div class="h-2 rounded-full bg-primary transition-all duration-300" style="width: ${progress}%;"></div>
+          </div>
+        </div>
+
+        <main class="flex-1 flex flex-col items-center justify-center p-4">
+          <div class="w-full max-w-md mx-auto aspect-[4/3]">
+            <div class="relative w-full h-full cursor-pointer flip-card transition-transform duration-500 ${this.isFlipped ? 'flipped' : ''}" onclick="app.flipCard()">
+              <div class="absolute inset-0 w-full h-full flip-card-front">
+                <div class="flex flex-col h-full items-stretch justify-center rounded-xl shadow-lg bg-white dark:bg-slate-800 p-6 text-center">
+                  <div class="flex-1 flex items-center justify-center">
+                    <p class="text-slate-900 dark:text-white text-2xl font-bold">${card.front}</p>
+                  </div>
+                  <div class="flex items-end justify-center gap-2">
+                    <span class="material-symbols-outlined text-base text-slate-500 dark:text-slate-400">touch_app</span>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm">Ketuk untuk melihat jawaban</p>
+                  </div>
+                </div>
+              </div>
+              <div class="absolute inset-0 w-full h-full flip-card-back">
+                <div class="flex flex-col h-full items-stretch justify-center rounded-xl shadow-lg bg-white dark:bg-slate-800 p-6 text-center">
+                  <div class="flex-1 flex flex-col items-center justify-center gap-4">
+                    <p class="text-slate-900 dark:text-white text-xl font-bold">Jawaban</p>
+                    <p class="text-slate-600 dark:text-slate-300 text-base">${card.back}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <footer class="flex justify-stretch w-full">
+          <div class="flex flex-1 gap-4 px-4 py-4 justify-between items-center">
+            <button onclick="app.prevCard()" class="flex size-14 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-slate-800 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors ${this.currentIndex === 0 ? 'opacity-50' : ''}">
+              <span class="material-symbols-outlined text-2xl">chevron_left</span>
+            </button>
+            <button onclick="app.shuffleCards()" class="flex size-14 items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-colors">
+              <span class="material-symbols-outlined text-2xl">shuffle</span>
+            </button>
+            <button onclick="app.nextCard()" class="flex size-14 items-center justify-center rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-slate-800 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors ${this.currentIndex === this.currentUnit.cards.length - 1 ? 'opacity-50' : ''}">
+              <span class="material-symbols-outlined text-2xl">chevron_right</span>
+            </button>
+          </div>
+        </footer>
+      </div>
+    `;
+  },
+
+  renderQuiz() {
+    const question = this.currentUnit.questions[this.currentIndex];
+    const progress = ((this.currentIndex + 1) / this.currentUnit.questions.length) * 100;
+    const isAnswered = this.selectedAnswer !== null;
+    const isCorrect = isAnswered && this.selectedAnswer === question.correct;
+
+    return `
+      <div class="relative flex h-screen w-full flex-col">
+        <header class="flex items-center p-4 pb-2 justify-between bg-background-light dark:bg-background-dark">
+          <button onclick="app.currentView = 'home'; app.render();" class="text-slate-800 dark:text-white flex size-10 items-center justify-center">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+          <h2 class="text-slate-800 dark:text-white text-lg font-bold flex-1 text-center">${this.currentUnit.title}</h2>
+          <div class="w-10"></div>
+        </header>
+
+        <main class="flex-1 flex flex-col px-4 pt-2 pb-4 overflow-y-auto">
+          <div class="flex flex-col gap-2 mb-6">
+            <div class="flex gap-6 justify-between">
+              <p class="text-slate-600 dark:text-slate-400 text-base font-medium">Soal ${this.currentIndex + 1} dari ${this.currentUnit.questions.length}</p>
+            </div>
+            <div class="rounded-full bg-slate-200 dark:bg-slate-700 h-2">
+              <div class="h-2 rounded-full bg-primary transition-all duration-300" style="width: ${progress}%;"></div>
+            </div>
+          </div>
+
+          <div class="flex flex-col flex-1">
+            <div class="bg-white dark:bg-[#192736] rounded-xl shadow-sm p-6 mb-6">
+              <h1 class="text-slate-900 dark:text-white text-2xl font-bold text-center">${question.question}</h1>
+            </div>
+
+            <div class="flex flex-col gap-3">
+              ${question.options.map((option, idx) => {
+                let borderClass = 'border-slate-300 dark:border-slate-700';
+                let bgClass = '';
+                let ringClass = '';
+                let iconClass = '';
+                
+                if (isAnswered) {
+                  if (idx === question.correct) {
+                    borderClass = 'border-success';
+                    bgClass = 'bg-success/10';
+                    ringClass = 'ring-2 ring-success';
+                    iconClass = '<span class="material-symbols-outlined text-success">check_circle</span>';
+                  } else if (idx === this.selectedAnswer) {
+                    borderClass = 'border-error';
+                    bgClass = 'bg-error/10';
+                    ringClass = 'ring-2 ring-error';
+                    iconClass = '<span class="material-symbols-outlined text-error">cancel</span>';
+                  }
+                } else if (this.selectedAnswer === idx) {
+                  borderClass = 'border-primary';
+                  bgClass = 'bg-primary/10';
+                  ringClass = 'ring-2 ring-primary';
+                }
+
+                return `
+                  <label class="flex items-center gap-4 rounded-xl border ${borderClass} ${bgClass} ${ringClass} p-4 transition-all cursor-pointer">
+                    <div class="flex grow flex-col">
+                      <p class="text-slate-800 dark:text-white text-base font-medium">${option}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      ${iconClass}
+                      <input 
+                        type="radio" 
+                        name="answer" 
+                        value="${idx}"
+                        ${this.selectedAnswer === idx ? 'checked' : ''}
+                        ${isAnswered ? 'disabled' : ''}
+                        onchange="app.selectAnswer(${idx})"
+                        class="h-5 w-5 appearance-none rounded-full border-2 border-slate-300 dark:border-slate-600 bg-transparent text-primary checked:border-primary checked:bg-primary"
+                      >
+                    </div>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </main>
+
+        <footer class="flex flex-col gap-3 px-4 py-4">
+          ${isAnswered ? `
+            <div class="flex items-center justify-center gap-2 p-3 rounded-lg ${isCorrect ? 'bg-success/10 text-success' : 'bg-error/10 text-error'}">
+              <span class="material-symbols-outlined">${isCorrect ? 'check_circle' : 'cancel'}</span>
+              <p class="font-medium">${isCorrect ? 'Jawaban Benar!' : 'Jawaban Salah'}</p>
+            </div>
+          ` : ''}
+          
+          <div class="flex gap-3">
+            <button onclick="app.prevQuestion()" class="flex-1 py-3 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white font-semibold ${this.currentIndex === 0 ? 'opacity-50' : ''}">
+              Sebelumnya
+            </button>
+            ${!isAnswered ? `
+              <button onclick="app.checkAnswer()" class="flex-1 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 ${this.selectedAnswer === null ? 'opacity-50' : ''}" ${this.selectedAnswer === null ? 'disabled' : ''}>
+                Periksa
+              </button>
+            ` : `
+              <button onclick="app.nextQuestion()" class="flex-1 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90">
+                ${this.currentIndex === this.currentUnit.questions.length - 1 ? 'Selesai' : 'Selanjutnya'}
+              </button>
+            `}
+          </div>
+        </footer>
+      </div>
+    `;
+  },
+
+  nextQuestion() {
+    if (this.currentIndex < this.currentUnit.questions.length - 1) {
+      this.currentIndex++;
+      this.selectedAnswer = null;
+      this.render();
+    } else {
+      this.showQuizResults();
+    }
+  },
+
+  attachListeners() {
+    // Tambahkan event listener jika diperlukan
+  }
+};
+
+// Inisialisasi aplikasi
+app.init();
+</script>
+</body>
+</html>
