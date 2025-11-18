@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html class="dark" lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Studi AI - Unit Pembelajaran</title>
+    
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
+    <!-- 2. Load Google Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    
+    <!-- 3. Konfigurasi Tailwind & CSS Kustom -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#258cf4",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#101922",
+                        "card-light": "#f8f9fa", // Warna lebih kontras
+                        "card-dark": "#1e293b",  // Warna lebih gelap
+                        "navbar-light": "#ffffff", // Navbar terpisah
+                        "navbar-dark": "#0a1219",  // Navbar lebih gelap
+                        success: "#2ECC71",
+                        error: "#E74C3C",
+                    },
+                    fontFamily: {
+                        display: ["Lexend", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px",
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            min-height: 100dvh;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .flip-card-container { perspective: 1000px; }
+        .flip-card-inner {
+            position: relative; width: 100%; height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flip-card-inner.is-flipped { transform: rotateY(180deg); }
+        .card-front, .card-back {
+            position: absolute; width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex; flex-direction: column;
+            border-radius: 0.75rem;
+        }
+        .card-back { transform: rotateY(180deg); }
+        .main-content::-webkit-scrollbar { display: none; }
+        .main-content { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white">
+    <div id="app" class="relative mx-auto flex h-[100dvh] w-full max-w-lg flex-col overflow-hidden shadow-2xl">
+        
+        <!-- =================================================================== -->
+        <!-- HALAMAN 1: DAFTAR UNIT (HOME)                                      -->
+        <!-- =================================================================== -->
+        <div id="page-deck-list" class="flex h-full flex-col">
+            <header class="flex items-center justify-between gap-4 bg-navbar-light dark:bg-navbar-dark px-4 py-3 backdrop-blur-sm shrink-0 border-b border-slate-200 dark:border-slate-800 z-10">
+                <h1 class="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em]">Unit Pembelajaran</h1>
+            </header>
+            <main id="deck-list-container" class="main-content flex-1 overflow-y-auto px-4 py-4">
+                <div>
+                    <h2 class="text-lg font-bold leading-tight tracking-[-0.015em] pb-3 pt-2">Semua Unit</h2>
+                    <div id="unit-list" class="flex flex-col gap-3">
+                        <!-- Item unit akan dimasukkan oleh JavaScript di sini -->
+                    </div>
+                </div>
+                <div id="empty-state" class="mt-12 hidden">
+                    <div class="flex flex-col items-center justify-center rounded-xl bg-card-light/50 dark:bg-card-dark/30 p-8 text-center">
+                        <div class="mb-4 flex size-16 items-center justify-center rounded-full bg-primary/20 text-primary">
+                            <span class="material-symbols-outlined text-4xl">add_box</span>
+                        </div>
+                        <h3 class="text-base font-bold text-slate-800 dark:text-white">Anda belum punya unit</h3>
+                        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Yuk, buat flashcard atau kuis pertama Anda!</p>
+                    </div>
+                </div>
+            </main>
+            <button id="fab-create" class="fixed bottom-6 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-transform active:scale-90">
+                <span class="material-symbols-outlined text-3xl">add</span>
+            </button>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- HALAMAN 2: FORMULIR BUAT UNIT BARU                                  -->
+        <!-- =================================================================== -->
+        <div id="page-create-form" class="flex h-full flex-col hidden">
+            <header class="flex items-center p-4 pb-2 shrink-0 bg-navbar-light dark:bg-navbar-dark border-b border-slate-200 dark:border-slate-800 z-10">
+                <button id="btn-create-back" class="flex size-10 shrink-0 items-center justify-center rounded-full text-slate-800 dark:text-white">
+                    <span class="material-symbols-outlined text-2xl">arrow_back</span>
+                </button>
+                <h1 class="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em]">Buat Unit Baru</h1>
+            </header>
+            <main class="main-content flex-1 overflow-y-auto px-4 py-2">
+                <form id="create-form" class="flex flex-col gap-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex flex-col items-center gap-2 rounded-xl border border-solid border-slate-300 dark:border-slate-700 p-4 transition-all cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:ring-2 has-[:checked]:ring-primary bg-card-light dark:bg-card-dark">
+                            <span class="material-symbols-outlined text-3xl text-primary">style</span>
+                            <p class="font-medium text-slate-800 dark:text-white">Flashcard</p>
+                            <input type="radio" name="unit-type" value="flashcard" class="sr-only" checked />
+                        </label>
+                        <label class="flex flex-col items-center gap-2 rounded-xl border border-solid border-slate-300 dark:border-slate-700 p-4 transition-all cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:ring-2 has-[:checked]:ring-primary bg-card-light dark:bg-card-dark">
+                            <span class="material-symbols-outlined text-3xl text-primary">quiz</span>
+                            <p class="font-medium text-slate-800 dark:text-white">Kuis</p>
+                            <input type="radio" name="unit-type" value="quiz" class="sr-only" />
+                        </label>
+                    </div>
+                    <div>
+                        <label for="form-title" class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Judul Unit</label>
+                        <input type="text" id="form-title" name="title" required class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-card-light dark:bg-card-dark focus:border-primary focus:ring-primary text-slate-900 dark:text-white placeholder-slate-400" placeholder="Contoh: Ibukota Negara ASEAN" />
+                    </div>
+                    <div>
+                        <label for="form-description" class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Topik Materi</label>
+                        <textarea id="form-description" name="description" rows="3" required class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-card-light dark:bg-card-dark focus:border-primary focus:ring-primary text-slate-900 dark:text-white placeholder-slate-400" placeholder="Deskripsikan topik yang ingin dibuatkan materi, contoh: 'Daftar ibukota negara di Asia Tenggara'"></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="form-count" class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Jumlah</label>
+                            <input type="number" id="form-count" name="count" required class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-card-light dark:bg-card-dark focus:border-primary focus:ring-primary text-slate-900 dark:text-white" value="5" min="1" max="20" />
+                        </div>
+                        <div>
+                            <label for="form-difficulty" class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Level</label>
+                            <select id="form-difficulty" name="difficulty" class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-card-light dark:bg-card-dark focus:border-primary focus:ring-primary text-slate-900 dark:text-white">
+                                <option value="mudah">Mudah</option>
+                                <option value="sedang">Sedang</option>
+                                <option value="sulit">Sulit</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </main>
+            <footer class="p-4 shrink-0 bg-navbar-light dark:bg-navbar-dark border-t border-slate-200 dark:border-slate-800">
+                <button id="btn-generate" class="flex w-full min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] transition-colors hover:bg-primary/90">
+                    <span class="truncate">Buat Unit (AI)</span>
+                </button>
+            </footer>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- HALAMAN 3: PEMUTAR FLASHCARD                                        -->
+        <!-- =================================================================== -->
+        <div id="page-flashcard-player" class="flex h-full flex-col hidden">
+            <header class="flex items-center p-4 pb-2 justify-between shrink-0 bg-navbar-light dark:bg-navbar-dark border-b border-slate-200 dark:border-slate-800 z-10">
+                <div class="flex size-12 shrink-0 items-center justify-start">
+                    <button id="btn-flashcard-back" class="flex items-center justify-center h-10 w-10 text-slate-800 dark:text-white">
+                        <span class="material-symbols-outlined text-2xl">arrow_back</span>
+                    </button>
+                </div>
+                <h1 id="flashcard-title" class="flex-1 truncate px-2 text-center text-lg font-bold leading-tight tracking-[-0.015em]">Judul Unit</h1>
+                <div class="flex w-12 items-center justify-end"></div>
+            </header>
+            <div class="flex flex-col gap-2 px-4 py-2 shrink-0">
+                <div class="flex gap-6 justify-end">
+                    <p id="flashcard-progress" class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal">1/10</p>
+                </div>
+                <div class="rounded-full bg-slate-200 dark:bg-slate-700">
+                    <div id="flashcard-progress-bar" class="h-2 rounded-full bg-primary transition-all duration-300" style="width: 10%;"></div>
+                </div>
+            </div>
+            <main class="flex-1 flex flex-col items-center justify-center p-4 overflow-hidden">
+                <div class="w-full max-w-md mx-auto aspect-[4/3] flip-card-container">
+                    <div id="flashcard-inner" class="relative w-full h-full cursor-pointer group flip-card-inner">
+                        <div class="card-front absolute inset-0 w-full h-full">
+                            <div class="flex flex-col h-full items-stretch justify-center rounded-xl shadow-lg bg-card-light dark:bg-card-dark p-6 text-center border border-slate-200 dark:border-slate-700">
+                                <div class="flex-1 flex items-center justify-center">
+                                    <p id="flashcard-front-text" class="text-2xl font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-white">Istilah Utama</p>
+                                </div>
+                                <div class="flex items-end justify-center gap-2">
+                                    <span class="material-symbols-outlined text-base text-slate-500 dark:text-slate-400">touch_app</span>
+                                    <p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal">Ketuk untuk melihat jawaban</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-back absolute inset-0 w-full h-full">
+                            <div class="flex flex-col h-full items-stretch justify-center rounded-xl shadow-lg bg-card-light dark:bg-card-dark p-6 text-center border border-slate-200 dark:border-slate-700">
+                                <div class="flex-1 flex flex-col items-center justify-center gap-4">
+                                    <p id="flashcard-back-text" class="text-xl font-normal leading-normal text-slate-900 dark:text-white">Ini adalah penjelasan rinci.</p>
+                                </div>
+                                <div class="flex items-end justify-center gap-2">
+                                    <span class="material-symbols-outlined text-base text-slate-500 dark:text-slate-400">touch_app</span>
+                                    <p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal">Ketuk untuk kembali</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <footer class="flex justify-stretch w-full shrink-0 p-4 bg-navbar-light dark:bg-navbar-dark border-t border-slate-200 dark:border-slate-800">
+                <div class="flex flex-1 gap-4 flex-wrap justify-between items-center">
+                    <button id="btn-flashcard-prev" class="flex size-14 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-slate-800 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50" disabled>
+                        <span class="material-symbols-outlined text-2xl">chevron_left</span>
+                    </button>
+                    <p class="text-sm font-medium text-slate-700 dark:text-slate-300"><span id="flashcard-current-index">1</span> / <span id="flashcard-total-cards">10</span></p>
+                    <button id="btn-flashcard-next" class="flex size-14 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/80 text-slate-800 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                        <span class="material-symbols-outlined text-2xl">chevron_right</span>
+                    </button>
+                </div>
+            </footer>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- HALAMAN 4: PEMUTAR KUIS                                             -->
+        <!-- =================================================================== -->
+        <div id="page-quiz-player" class="flex h-full flex-col hidden">
+            <header class="flex items-center p-4 pb-2 justify-between shrink-0 bg-navbar-light dark:bg-navbar-dark border-b border-slate-200 dark:border-slate-800 z-10">
+                <button id="btn-quiz-back" class="text-slate-800 dark:text-white flex size-10 shrink-0 items-center justify-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+                <h2 id="quiz-title" class="text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center truncate px-2">Kuis</h2>
+                <div class="flex w-10 items-center justify-end"></div>
+            </header>
+            <main class="flex-1 flex flex-col px-4 pt-2 pb-4 overflow-y-auto main-content">
+                <div class="flex flex-col gap-2 mb-6">
+                    <div class="flex gap-6 justify-between">
+                        <p id="quiz-progress" class="text-slate-600 dark:text-slate-400 text-base font-medium leading-normal">Soal 1 dari 10</p>
+                    </div>
+                    <div class="rounded-full bg-slate-200 dark:bg-slate-700 h-2">
+                        <div id="quiz-progress-bar" class="h-2 rounded-full bg-primary transition-all duration-300" style="width: 10%;"></div>
+                    </div>
+                </div>
+                <div class="flex flex-col flex-1">
+                    <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm p-6 mb-6 border border-slate-200 dark:border-slate-700">
+                        <h1 id="quiz-question-text" class="tracking-tight text-[24px] font-bold leading-tight text-center text-slate-900 dark:text-white">Pertanyaan...</h1>
+                    </div>
+                    <div id="quiz-options-container" class="flex flex-col gap-3">
+                        <!-- Pilihan jawaban -->
+                    </div>
+                </div>
+            </main>
+            <footer class="bg-navbar-light dark:bg-navbar-dark p-4 shrink-0 border-t border-slate-200 dark:border-slate-800">
+                <div id="quiz-result-message" class="mb-2 hidden h-10 items-center justify-center">
+                    <p id="quiz-result-text" class="text-lg font-bold"></p>
+                </div>
+                <button id="btn-quiz-check" class="flex w-full min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] transition-colors hover:bg-primary/90 disabled:opacity-50" disabled>
+                    <span class="truncate">Periksa Jawaban</span>
+                </button>
+            </footer>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- KOMPONEN GLOBAL: LOADING OVERLAY                                    -->
+        <!-- =================================================================== -->
+        <div id="loading-overlay" class="fixed inset-0 z-50 flex-col items-center justify-center bg-black/50 backdrop-blur-sm hidden">
+            <div class="w-16 h-16 border-4 border-t-primary border-slate-200 dark:border-slate-700 rounded-full animate-spin"></div>
+            <p class="mt-4 text-white text-lg font-medium">Membuat unit AI...</p>
+        </div>
+        
+        <!-- =================================================================== -->
+        <!-- KOMPONEN GLOBAL: ERROR TOAST                                        -->
+        <!-- =================================================================== -->
+        <div id="error-toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-60 bg-error text-white px-4 py-3 rounded-lg shadow-lg hidden transition-all duration-300">
+            <p id="error-toast-message" class="text-center font-medium">Terjadi kesalahan.</p>
+        </div>
+        
+    </div> <!-- Akhir dari #app -->
+
+    <!-- ======================================================================= -->
+    <!-- SCRIPT APLIKASI UTAMA                                                   -->
+    <!-- ======================================================================= -->
+    <script type="module">
+        // Kunci untuk localStorage
+        const STORAGE_KEY = 'eduAppDBv2'; // Versi baru untuk mencegah konflik
+        const API_URL = 'https://taraka.id/apigate/gr-gpt.php';
+        
+        // Variabel Status Aplikasi
+        let db = { units: [] };
+        let currentPage = 'page-deck-list';
+        let currentUnit = null;
+        let currentCardIndex = 0;
+        let quizAnswered = false;
+        
+        // --- Referensi Elemen DOM ---
+        const pages = {
+            'page-deck-list': document.getElementById('page-deck-list'),
+            'page-create-form': document.getElementById('page-create-form'),
+            'page-flashcard-player': document.getElementById('page-flashcard-player'),
+            'page-quiz-player': document.getElementById('page-quiz-player'),
+        };
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const errorToast = document.getElementById('error-toast');
+        const errorToastMessage = document.getElementById('error-toast-message');
+        let errorToastTimeout;
+        
+        const unitList = document.getElementById('unit-list');
+        const emptyState = document.getElementById('empty-state');
+        const fabCreate = document.getElementById('fab-create');
+        
+        const createForm = document.getElementById('create-form');
+        const btnCreateBack = document.getElementById('btn-create-back');
+        const btnGenerate = document.getElementById('btn-generate');
+        
+        const btnFlashcardBack = document.getElementById('btn-flashcard-back');
+        const flashcardTitle = document.getElementById('flashcard-title');
+        const flashcardProgress = document.getElementById('flashcard-progress');
+        const flashcardProgressBar = document.getElementById('flashcard-progress-bar');
+        const flashcardInner = document.getElementById('flashcard-inner');
+        const flashcardFrontText = document.getElementById('flashcard-front-text');
+        const flashcardBackText = document.getElementById('flashcard-back-text');
+        const btnFlashcardPrev = document.getElementById('btn-flashcard-prev');
+        const btnFlashcardNext = document.getElementById('btn-flashcard-next');
+        const flashcardCurrentIndex = document.getElementById('flashcard-current-index');
+        const flashcardTotalCards = document.getElementById('flashcard-total-cards');
+        
+        const btnQuizBack = document.getElementById('btn-quiz-back');
+        const quizTitle = document.getElementById('quiz-title');
+        const quizProgress = document.getElementById('quiz-progress');
+        const quizProgressBar = document.getElementById('quiz-progress-bar');
+        const quizQuestionText = document.getElementById('quiz-question-text');
+        const quizOptionsContainer = document.getElementById('quiz-options-container');
+        const btnQuizCheck = document.getElementById('btn-quiz-check');
+        const quizResultMessage = document.getElementById('quiz-result-message');
+        const quizResultText = document.getElementById('quiz-result-text');
+        
+        // --- Fungsi Inti Aplikasi ---
+        function init() {
+            if (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            loadDB();
+            renderDeckList();
+            addEventListeners();
+        }
+        
+        function saveDB() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+            } catch (error) {
+                console.error("Gagal menyimpan ke localStorage:", error);
+                showError("Gagal menyimpan data lokal.");
+            }
+        }
+        
+        function loadDB() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                try {
+                    db = JSON.parse(data);
+                    if (!db.units) db.units = [];
+                } catch (error) {
+                    console.error("Gagal memuat data:", error);
+                    db = { units: [] };
+                }
+            }
+        }
+        
+        function showLoading(show) {
+            if (show) {
+                loadingOverlay.classList.remove('hidden');
+                loadingOverlay.classList.add('flex');
+            } else {
+                loadingOverlay.classList.add('hidden');
+                loadingOverlay.classList.remove('flex');
+            }
+        }
+        
+        function showError(message) {
+            if (errorToastTimeout) clearTimeout(errorToastTimeout);
+            errorToastMessage.textContent = message;
+            errorToast.classList.remove('hidden');
+            errorToastTimeout = setTimeout(() => {
+                errorToast.classList.add('hidden');
+            }, 3000);
+        }
+        
+        function navigate(pageId) {
+            Object.values(pages).forEach(page => page.classList.add('hidden'));
+            const targetPage = pages[pageId];
+            if (targetPage) {
+                targetPage.classList.remove('hidden');
+                currentPage = pageId;
+            } else {
+                pages['page-deck-list'].classList.remove('hidden');
+                currentPage = 'page-deck-list';
+            }
+        }
+        
+        function addEventListeners() {
+            fabCreate.addEventListener('click', () => navigate('page-create-form'));
+            btnCreateBack.addEventListener('click', () => {
+                navigate('page-deck-list');
+                createForm.reset();
+            });
+            btnGenerate.addEventListener('click', handleGenerateClick);
+            
+            btnFlashcardBack.addEventListener('click', () => navigate('page-deck-list'));
+            flashcardInner.addEventListener('click', () => flashcardInner.classList.toggle('is-flipped'));
+            btnFlashcardPrev.addEventListener('click', handleFlashcardPrev);
+            btnFlashcardNext.addEventListener('click', handleFlashcardNext);
+            
+            btnQuizBack.addEventListener('click', () => navigate('page-deck-list'));
+            btnQuizCheck.addEventListener('click', handleQuizCheck);
+            quizOptionsContainer.addEventListener('click', (e) => {
+                if (e.target.name === 'quiz-option' && !quizAnswered) {
+                    btnQuizCheck.disabled = false;
+                }
+            });
+            
+            unitList.addEventListener('click', (e) => {
+                const playButton = e.target.closest('.btn-play-unit');
+                const deleteButton = e.target.closest('.btn-delete-unit');
+                
+                if (playButton) {
+                    const unitId = playButton.dataset.unitId;
+                    playUnit(unitId);
+                } else if (deleteButton) {
+                    e.stopPropagation();
+                    const unitId = deleteButton.dataset.unitId;
+                    if (confirm('Hapus unit ini?')) {
+                        deleteUnit(unitId);
+                    }
+                }
+            });
+        }
+        
+        // --- Logika Halaman: Deck List ---
+        function renderDeckList() {
+            unitList.innerHTML = '';
+            if (db.units.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                db.units.forEach(unit => {
+                    const isFlashcard = unit.type === 'flashcard';
+                    const icon = isFlashcard ? 'style' : 'quiz';
+                    const count = isFlashcard ? unit.cards.length : unit.questions.length;
+                    const countLabel = isFlashcard ? 'kartu' : 'soal';
+                    
+                    const unitHTML = `
+                        <div class="flex items-center gap-4 rounded-xl bg-card-light dark:bg-card-dark p-3 shadow-sm btn-play-unit cursor-pointer border border-slate-200 dark:border-slate-700" data-unit-id="${unit.id}">
+                            <div class="flex shrink-0 size-12 items-center justify-center rounded-lg bg-primary/20 text-primary">
+                                <span class="material-symbols-outlined text-2xl">${icon}</span>
+                            </div>
+                            <div class="flex flex-1 flex-col justify-center overflow-hidden">
+                                <p class="truncate text-base font-medium leading-normal text-slate-900 dark:text-white">${unit.title}</p>
+                                <p class="truncate text-sm font-normal leading-normal text-slate-500 dark:text-slate-400">${count} ${countLabel}</p>
+                            </div>
+                            <button class="shrink-0 p-2 btn-delete-unit z-10" data-unit-id="${unit.id}">
+                                <span class="material-symbols-outlined text-xl text-slate-500 dark:text-slate-400">delete</span>
+                            </button>
+                        </div>
+                    `;
+                    unitList.innerHTML += unitHTML;
+                });
+            }
+        }
+        
+        function playUnit(unitId) {
+            currentUnit = db.units.find(u => u.id === unitId);
+            if (!currentUnit) return;
+            currentCardIndex = 0;
+            if (currentUnit.type === 'flashcard') {
+                renderFlashcard();
+                navigate('page-flashcard-player');
+            } else {
+                renderQuizQuestion();
+                navigate('page-quiz-player');
+            }
+        }
+        
+        function deleteUnit(unitId) {
+            db.units = db.units.filter(u => u.id !== unitId);
+            saveDB();
+            renderDeckList();
+        }
+        
+        // --- Logika Halaman: Create Form (Integrasi AI) ---
+        async function handleGenerateClick() {
+            const formData = new FormData(createForm);
+            const data = Object.fromEntries(formData.entries());
+            
+            if (!data.title || !data.description || !data.count) {
+                showError("Harap isi semua kolom.");
+                return;
+            }
+            
+            showLoading(true);
+            const { prompt, system } = buildAiPrompts(data);
+            let apiResponseText = "";
+            
+            try {
+                apiResponseText = await callAIApi(prompt, system);
+                let cleanResponse = apiResponseText.trim();
+                if (cleanResponse.startsWith('"') && cleanResponse.endsWith('"')) {
+                    cleanResponse = cleanResponse.substring(1, cleanResponse.length - 1);
+                }
+                cleanResponse = cleanResponse.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+                const parsedJson = JSON.parse(cleanResponse);
+                processGeneratedData(data, parsedJson);
+            } catch (error) {
+                console.error("Gagal membuat unit:", error, "Respons API Mentah:", apiResponseText);
+                showLoading(false);
+                showError("Gagal memproses data AI. Coba lagi.");
+            }
+        }
+        
+        function buildAiPrompts(formData) {
+            const { "unit-type": type, description, count, difficulty } = formData;
+            let prompt = "";
+            const system = "Anda adalah asisten AI yang membuat materi pembelajaran. HANYA jawab dengan format JSON yang diminta. JANGAN tambahkan teks pembuka, penutup, atau penjelasan. Pastikan JSON valid.";
+            
+            if (type === 'flashcard') {
+                prompt = `Topik: ${description}\nJumlah: ${count}\nKesulitan: ${difficulty}\n\nBuatkan materi flashcard berdasarkan topik di atas.\nHANYA kembalikan string JSON yang valid, tanpa teks lain.\nStruktur JSON yang WAJIB diikuti:\n{\n  "cards": [\n    {\n      "term": "Istilah atau pertanyaan singkat",\n      "definition": "Jawaban atau penjelasan"\n    }\n  ]\n}`;
+            } else {
+                prompt = `Topik: ${description}\nJumlah: ${count}\nKesulitan: ${difficulty}\n\nBuatkan materi kuis pilihan ganda (4 pilihan) berdasarkan topik di atas.\nHANYA kembalikan string JSON yang valid, tanpa teks lain.\nPastikan salah satu dari 'options' adalah 'answer' yang benar.\nStruktur JSON yang WAJIB diikuti:\n{\n  "questions": [\n    {\n      "question": "Teks pertanyaan",\n      "options": ["Pilihan 1", "Pilihan 2", "Pilihan 3", "Pilihan 4"],\n      "answer": "Teks jawaban yang benar (harus sama persis dengan salah satu options)"\n    }\n  ]\n}`;
+            }
+            return { prompt, system };
+        }
+        
+        async function callAIApi(prompt, system) {
+            const payload = JSON.stringify({ prompt, system });
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: payload
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.text();
+        }
+        
+        function processGeneratedData(formData, apiData) {
+            if (formData['unit-type'] === 'flashcard' && (!apiData.cards || !Array.isArray(apiData.cards) || apiData.cards.length === 0)) {
+                throw new Error("Data flashcard dari AI tidak valid atau kosong.");
+            }
+            if (formData['unit-type'] === 'quiz' && (!apiData.questions || !Array.isArray(apiData.questions) || apiData.questions.length === 0)) {
+                throw new Error("Data kuis dari AI tidak valid atau kosong.");
+            }
+            
+            const newUnit = {
+                id: Date.now().toString(),
+                type: formData['unit-type'],
+                title: formData.title,
+                description: formData.description,
+                difficulty: formData.difficulty,
+                createdAt: new Date().toISOString(),
+                ...apiData
+            };
+            
+            db.units.push(newUnit);
+            saveDB();
+            showLoading(false);
+            renderDeckList();
+            navigate('page-deck-list');
+            createForm.reset();
+        }
+        
+        // --- Logika Halaman: Flashcard Player ---
+        function renderFlashcard() {
+            if (!currentUnit || !currentUnit.cards || currentUnit.cards.length === 0) {
+                showError("Gagal memuat flashcard.");
+                navigate('page-deck-list');
+                return;
+            }
+            
+            const card = currentUnit.cards[currentCardIndex];
+            const total = currentUnit.cards.length;
+            const progressPercent = ((currentCardIndex + 1) / total) * 100;
+            
+            flashcardTitle.textContent = currentUnit.title;
+            flashcardProgress.textContent = `${currentCardIndex + 1}/${total}`;
+            flashcardProgressBar.style.width = `${progressPercent}%`;
+            flashcardFrontText.textContent = card.term;
+            flashcardBackText.textContent = card.definition;
+            flashcardInner.classList.remove('is-flipped');
+            btnFlashcardPrev.disabled = (currentCardIndex === 0);
+            btnFlashcardNext.disabled = (currentCardIndex === total - 1);
+            flashcardCurrentIndex.textContent = currentCardIndex + 1;
+            flashcardTotalCards.textContent = total;
+        }
+        
+        function handleFlashcardPrev() {
+            if (currentCardIndex > 0) {
+                currentCardIndex--;
+                renderFlashcard();
+            }
+        }
+        
+        function handleFlashcardNext() {
+            if (currentCardIndex < currentUnit.cards.length - 1) {
+                currentCardIndex++;
+                renderFlashcard();
+            }
+        }
+        
+        // --- Logika Halaman: Quiz Player ---
+        function renderQuizQuestion() {
+            if (!currentUnit || !currentUnit.questions || currentUnit.questions.length === 0) {
+                showError("Gagal memuat kuis.");
+                navigate('page-deck-list');
+                return;
+            }
+            
+            const question = currentUnit.questions[currentCardIndex];
+            const total = currentUnit.questions.length;
+            const progressPercent = ((currentCardIndex + 1) / total) * 100;
+            quizAnswered = false;
+            
+            quizTitle.textContent = currentUnit.title;
+            quizProgress.textContent = `Soal ${currentCardIndex + 1} dari ${total}`;
+            quizProgressBar.style.width = `${progressPercent}%`;
+            quizQuestionText.textContent = question.question;
+            
+            quizOptionsContainer.innerHTML = '';
+            const shuffledOptions = [...question.options].sort(() => Math.random() - 0.5);
+            
+            shuffledOptions.forEach((option, index) => {
+                const optionId = `option-${index}`;
+                const optionHTML = `
+                    <label for="${optionId}" class="quiz-option-label flex items-center gap-4 rounded-xl border border-solid border-slate-300 dark:border-slate-700 p-4 transition-all cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:ring-2 has-[:checked]:ring-primary bg-card-light dark:bg-card-dark">
+                        <div class="flex grow flex-col">
+                            <p class="text-slate-800 dark:text-white text-base font-medium leading-normal">${option}</p>
+                        </div>
+                        <input id="${optionId}" class="h-5 w-5 appearance-none rounded-full border-2 border-slate-300 dark:border-slate-600 bg-transparent text-primary checked:border-primary checked:bg-primary checked:bg-[url('data:image/svg+xml,%3csvg_viewBox=%270_0_16_16%27_fill=%27white%27_xmlns=%27http://www.w3.org/2000/svg%27%3e%3ccircle_cx=%278%27_cy=%278%27_r=%273%27/%3e%3c/svg%3e')] focus:outline-none focus:ring-0 focus:ring-offset-0" name="quiz-option" type="radio" value="${option}"/>
+                    </label>
+                `;
+                quizOptionsContainer.innerHTML += optionHTML;
+            });
+            
+            btnQuizCheck.textContent = "Periksa Jawaban";
+            btnQuizCheck.disabled = true;
+            quizResultMessage.classList.add('hidden');
+        }
+        
+        function handleQuizCheck() {
+            if (quizAnswered) {
+                currentCardIndex++;
+                if (currentCardIndex < currentUnit.questions.length) {
+                    renderQuizQuestion();
+                } else {
+                    const correctAnswers = currentUnit.questions.reduce((count, q, index) => {
+                        // Logika pencocokan jawaban bisa ditambahkan di sini
+                        return count;
+                    }, 0);
+                    alert(`Kuis Selesai! Anda menjawab ${correctAnswers} dari ${currentUnit.questions.length} soal.`);
+                    navigate('page-deck-list');
+                }
+            } else {
+                const selectedOption = document.querySelector('input[name="quiz-option"]:checked');
+                if (!selectedOption) return;
+                
+                quizAnswered = true;
+                const selectedValue = selectedOption.value;
+                const correctAnswer = currentUnit.questions[currentCardIndex].answer;
+                const isCorrect = (selectedValue === correctAnswer);
+                
+                quizResultMessage.classList.remove('hidden');
+                if (isCorrect) {
+                    quizResultText.textContent = "Jawaban Benar!";
+                    quizResultText.className = "text-lg font-bold text-success";
+                } else {
+                    quizResultText.textContent = "Jawaban Salah";
+                    quizResultText.className = "text-lg font-bold text-error";
+                }
+                
+                const labels = quizOptionsContainer.querySelectorAll('.quiz-option-label');
+                labels.forEach(label => {
+                    const input = label.querySelector('input');
+                    input.disabled = true;
+                    if (input.value === correctAnswer) {
+                        label.className = "flex items-center gap-4 rounded-xl border border-solid p-4 transition-all ring-2 border-success bg-success/10 ring-success bg-card-light dark:bg-card-dark";
+                    } else if (input.checked && !isCorrect) {
+                        label.className = "flex items-center gap-4 rounded-xl border border-solid p-4 transition-all ring-2 border-error bg-error/10 ring-error bg-card-light dark:bg-card-dark";
+                    } else {
+                        label.className = "flex items-center gap-4 rounded-xl border border-solid border-slate-300 dark:border-slate-700 p-4 transition-all opacity-60 bg-card-light dark:bg-card-dark";
+                    }
+                });
+                
+                btnQuizCheck.textContent = (currentCardIndex === currentUnit.questions.length - 1) ? "Selesai" : "Lanjut";
+                btnQuizCheck.disabled = false;
+            }
+        }
+        
+        // --- Mulai Aplikasi ---
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
