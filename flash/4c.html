@@ -1,0 +1,530 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-R">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kartu Kilas AI (AI Flashcards)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            color: #e5e7eb;
+        }
+        .card-container {
+            perspective: 1000px;
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .card-container.is-flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            background-color: #1f2937;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .card-back {
+            transform: rotateY(180deg);
+            background-color: #374151;
+        }
+        /* Custom modal for alerts */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: #1f2937;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            max-width: 90%;
+            width: 500px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+        }
+        /* Loading spinner */
+        .loader {
+            border: 4px solid #4b5563;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="app-container" class="w-full max-w-4xl mx-auto">
+        <div id="home-view">
+            <h1 class="text-4xl font-bold text-center text-white mb-2">Kartu Belajar</h1>
+            <p class="text-center text-gray-400 mb-8">Buat set kartu dari topik yang ingin dipelajari.</p>
+
+            <div class="mb-4 border-b border-gray-700">
+                <nav class="flex -mb-px space-x-8" aria-label="Tabs">
+                    <button id="tab-generator-btn" class="tab-btn border-blue-500 text-blue-400 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Buat Set Baru
+                    </button>
+                    <button id="tab-decks-btn" class="tab-btn border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        Lihat Set Kartu
+                    </button>
+                </nav>
+            </div>
+
+            <div>
+                <div id="tab-panel-generator">
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+                        <h2 class="text-xl font-semibold mb-4 text-white">Buat Set Kartu Baru</h2>
+                        <div class="mb-4">
+                            <label for="deck-title-input" class="block mb-2 text-sm font-medium text-gray-300">Judul Set Kartu</label>
+                            <input type="text" id="deck-title-input" class="w-full bg-gray-700 text-white p-3 rounded-md border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Tulis judul">
+                        </div>
+                        <div>
+                            <label for="topic-input" class="block mb-2 text-sm font-medium text-gray-300">Materi / Topik Kartu</label>
+                            <textarea id="topic-input" class="w-full bg-gray-700 text-white p-3 rounded-md border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" rows="4" placeholder="Tulis deskripsi materi/konsep"></textarea>
+                        </div>
+                        <div class="mt-4">
+                            <label for="card-count-select" class="block mb-2 text-sm font-medium text-gray-300">Jumlah Kartu untuk Dibuat:</label>
+                            <select id="card-count-select" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                                <option value="5">5</option>
+                                <option selected value="10">10 (Default)</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                                <option value="25">25</option>
+                                <option value="30">30</option>
+                            </select>
+                        </div>
+                        <button id="generate-btn" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105 flex items-center justify-center">
+                            <span id="generate-btn-text">Buat dengan AI</span>
+                            <div id="generate-loader" class="loader hidden ml-3" style="width: 20px; height: 20px; border-width: 3px;"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="tab-panel-decks" class="hidden">
+                    <div id="decks-container">
+                        <h2 class="text-2xl font-bold mb-4 text-white">Set Kartu Anda</h2>
+                        <div id="decks-list" class="space-y-4">
+                            </div>
+                        <p id="no-decks-message" class="text-gray-500 text-center py-8 hidden">Anda belum punya set kartu. Buat satu dengan AI di tab 'Buat Set Baru'!</p>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+        <div id="study-view" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <button id="back-to-home-btn" class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition">Kembali</button>
+                <h2 id="study-deck-title" class="text-2xl font-bold text-center text-white">Mempelajari...</h2>
+                <div class="text-lg font-mono bg-gray-700 px-3 py-1 rounded-md"><span id="card-counter">0</span> / <span id="total-cards">0</span></div>
+            </div>
+            <div id="study-card-container" class="card-container h-80 w-full mb-6">
+                <div class="card-inner">
+                    <div class="card-face text-3xl text-center" id="card-front"></div>
+                    <div class="card-face card-back text-xl text-center" id="card-back"></div>
+                </div>
+            </div>
+            <div id="flip-button-container" class="text-center">
+                <button id="flip-card-btn" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105">Balik Kartu</button>
+            </div>
+            <div id="srs-buttons-container" class="hidden grid grid-cols-3 gap-4 mt-6">
+                <button data-quality="1" class="srs-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition-transform transform hover:scale-105">Sulit</button>
+                <button data-quality="3" class="srs-btn bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg transition-transform transform hover:scale-105">Bisa</button>
+                <button data-quality="5" class="srs-btn bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-transform transform hover:scale-105">Mudah</button>
+            </div>
+            <div id="study-complete-message" class="hidden text-center p-8 bg-gray-800 rounded-lg">
+                <h3 class="text-2xl font-bold text-green-400">Kerja Bagus!</h3>
+                <p class="text-gray-300 mt-2">Anda telah menyelesaikan semua kartu untuk sesi ini.</p>
+            </div>
+        </div>
+
+        <div id="custom-modal" class="modal-backdrop hidden">
+            <div class="modal-content">
+                <p id="modal-text" class="text-lg text-white mb-6"></p>
+                <div id="modal-actions" class="flex justify-end space-x-4">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- API ENDPOINT SESUAI KODE-2 ---
+//        const API_URL = 'https://taraka.id/apigate/polli-openai.php';
+        const API_URL = 'https://taraka.id/apigate/index.php';
+
+        // --- State Management ---
+        let state = {
+            decks: [],
+            currentDeckIndex: -1,
+            currentCardIndex: -1,
+            studyQueue: []
+        };
+
+        const loadState = () => {
+            const savedState = localStorage.getItem('aiFlashcardsState');
+            if (savedState) {
+                state = JSON.parse(savedState);
+            }
+        };
+
+        const saveState = () => {
+            localStorage.setItem('aiFlashcardsState', JSON.stringify(state));
+        };
+
+        // --- UI Selectors ---
+        const homeView = document.getElementById('home-view');
+        const studyView = document.getElementById('study-view');
+        const decksList = document.getElementById('decks-list');
+        const noDecksMessage = document.getElementById('no-decks-message');
+        const generateBtn = document.getElementById('generate-btn');
+
+        // ### PERBAIKAN 1: Logika untuk Tab ###
+        const tabs = [
+            { btn: document.getElementById('tab-generator-btn'), panel: document.getElementById('tab-panel-generator') },
+            { btn: document.getElementById('tab-decks-btn'),     panel: document.getElementById('tab-panel-decks') }
+        ];
+        const activeTabClasses = ['border-blue-500', 'text-blue-400'];
+        const inactiveTabClasses = ['border-transparent', 'text-gray-400', 'hover:text-gray-300', 'hover:border-gray-500'];
+
+        tabs.forEach(tab => {
+            tab.btn.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    if (t === tab) { // Tab yang aktif
+                        t.panel.classList.remove('hidden');
+                        t.btn.classList.add(...activeTabClasses);
+                        t.btn.classList.remove(...inactiveTabClasses);
+                    } else { // Tab yang tidak aktif
+                        t.panel.classList.add('hidden');
+                        t.btn.classList.add(...inactiveTabClasses);
+                        t.btn.classList.remove(...activeTabClasses);
+                    }
+                });
+            });
+        });
+        // ### AKHIR PERBAIKAN 1 ###
+
+
+        // --- View Switching ---
+        const showView = (view) => {
+            homeView.classList.add('hidden');
+            studyView.classList.add('hidden');
+            if (view === 'home') homeView.classList.remove('hidden');
+            if (view === 'study') studyView.classList.remove('hidden');
+        };
+
+        // --- Modal ---
+        const customModal = document.getElementById('custom-modal');
+        const modalText = document.getElementById('modal-text');
+        const modalActions = document.getElementById('modal-actions');
+
+        const showAlert = (message, onOk) => {
+            modalText.textContent = message;
+            modalActions.innerHTML = `<button id="modal-ok" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">OK</button>`;
+            customModal.classList.remove('hidden');
+            document.getElementById('modal-ok').onclick = () => {
+                customModal.classList.add('hidden');
+                if (onOk) onOk();
+            };
+        };
+
+        const showConfirm = (message, onConfirm) => {
+            modalText.textContent = message;
+            modalActions.innerHTML = `
+                <button id="modal-cancel" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded">Batal</button>
+                <button id="modal-confirm" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Hapus</button>
+            `;
+            customModal.classList.remove('hidden');
+            document.getElementById('modal-confirm').onclick = () => {
+                customModal.classList.add('hidden');
+                onConfirm(true);
+            };
+            document.getElementById('modal-cancel').onclick = () => {
+                customModal.classList.add('hidden');
+                onConfirm(false);
+            };
+        };
+
+        // --- Render Functions ---
+        const renderDecks = () => {
+            decksList.innerHTML = '';
+            if (state.decks.length === 0) {
+                noDecksMessage.classList.remove('hidden');
+            } else {
+                noDecksMessage.classList.add('hidden');
+                state.decks.forEach((deck, index) => {
+                    const cardsDue = deck.cards.filter(card => new Date(card.nextReviewDate) <= new Date()).length;
+                    const deckElement = document.createElement('div');
+                    deckElement.className = 'bg-gray-800 p-4 rounded-lg flex justify-between items-center shadow-md';
+                    deckElement.innerHTML = `
+                        <div>
+                            <h3 class="text-lg font-semibold text-white">${deck.title}</h3>
+                            <p class="text-sm text-gray-400">${deck.cards.length} kartu total, ${cardsDue} perlu diulas.</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button data-index="${index}" class="study-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition ${cardsDue === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${cardsDue === 0 ? 'disabled' : ''}>Belajar</button>
+                            <button data-index="${index}" class="download-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">Unduh</button>
+                            <button data-index="${index}" class="delete-btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition">Hapus</button>
+                        </div>
+                    `;
+                    decksList.appendChild(deckElement);
+                });
+            }
+        };
+
+        const renderStudyCard = () => {
+            const studyCardContainer = document.getElementById('study-card-container');
+            const srsButtonsContainer = document.getElementById('srs-buttons-container');
+            const flipButtonContainer = document.getElementById('flip-button-container');
+            const studyCompleteMessage = document.getElementById('study-complete-message');
+            const cardCounterEl = document.getElementById('card-counter');
+
+            // ### PERBAIKAN 2: Logika Paginasi Diperbaiki ###
+            // Ambil total kartu dari span 'total-cards' yang sudah di-set saat studi dimulai
+            const totalCardsNum = parseInt(document.getElementById('total-cards').textContent, 10) || 0;
+
+            studyCardContainer.classList.remove('is-flipped');
+            srsButtonsContainer.classList.add('hidden');
+            flipButtonContainer.classList.remove('hidden');
+
+            if (state.studyQueue.length === 0) {
+                studyCardContainer.classList.add('hidden');
+                flipButtonContainer.classList.add('hidden');
+                srsButtonsContainer.classList.add('hidden');
+                studyCompleteMessage.classList.remove('hidden');
+                // Saat selesai, tampilkan angka total, misal "10 / 10"
+                cardCounterEl.textContent = totalCardsNum; 
+                return;
+            }
+
+            studyCardContainer.classList.remove('hidden');
+            studyCompleteMessage.classList.add('hidden');
+
+            const cardIndexInDeck = state.studyQueue[0];
+            const card = state.decks[state.currentDeckIndex].cards[cardIndexInDeck];
+
+            document.getElementById('card-front').textContent = card.question;
+            document.getElementById('card-back').textContent = card.answer;
+
+            // Logika baru untuk menghitung kartu saat ini
+            const cardsRemaining = state.studyQueue.length;
+            const currentCardNum = totalCardsNum - cardsRemaining + 1;
+            cardCounterEl.textContent = currentCardNum; // Tampilkan "1 / 10", "2 / 10", dst.
+            // ### AKHIR PERBAIKAN 2 ###
+        };
+
+
+        // --- Spaced Repetition System (SRS) Logic ---
+        const updateSRS = (cardIndexInDeck, quality) => {
+            const card = state.decks[state.currentDeckIndex].cards[cardIndexInDeck];
+            if (quality < 3) {
+                card.repetition = 0;
+                card.interval = 1;
+            } else {
+                if (card.repetition === 0) {
+                    card.interval = 1;
+                } else if (card.repetition === 1) {
+                    card.interval = 6;
+                } else {
+                    card.interval = Math.round(card.interval * card.easeFactor);
+                }
+                card.repetition += 1;
+            }
+            card.easeFactor = card.easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+            if (card.easeFactor < 1.3) card.easeFactor = 1.3;
+            const now = new Date();
+            card.nextReviewDate = new Date(now.setDate(now.getDate() + card.interval)).toISOString();
+        };
+
+        // --- Event Handlers ---
+        const downloadDeckAsHTML = (deck) => {
+            const generateStandaloneHTML = (deckData) => {
+                const cardsJsonString = JSON.stringify(deckData.cards.map(c => ({ question: c.question, answer: c.answer })));
+                const sanitizedTitle = deckData.title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                return `<!DOCTYPE html><html lang="id"><head>    <meta charset="UTF-8">    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <title>Kartu Kilas: ${sanitizedTitle}</title>    <script src="https://cdn.tailwindcss.com"><\/script>    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">    <style>        body { font-family: 'Inter', sans-serif; background-color: #111827; color: #e5e7eb; }        .card-container { perspective: 1000px; }        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }        .card-container.is-flipped .card-inner { transform: rotateY(180deg); }        .card-face { position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }        .card-back { transform: rotateY(180deg); }    </style></head><body class="min-h-screen flex items-center justify-center p-4">    <div class="w-full max-w-2xl mx-auto text-center">        <h1 class="text-3xl font-bold mb-6">${sanitizedTitle}</h1>        <div id="card-container" class="card-container h-80 w-full mb-6">            <div class="card-inner">                <div id="card-front" class="card-face text-2xl bg-gray-800"></div>                <div id="card-back" class="card-face card-back text-xl bg-gray-700"></div>            </div>        </div>        <div class="flex justify-center items-center space-x-4">            <button id="prev-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition">Sebelumnya</button>            <button id="flip-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition">Balik Kartu</button>            <button id="next-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition">Berikutnya</button>        </div>        <p class="mt-4 text-gray-400" id="card-counter">1 / ${deckData.cards.length}</p>    </div>    <script>        document.addEventListener('DOMContentLoaded', () => {            const cards = ${cardsJsonString};            let currentIndex = 0;            const cardContainer = document.getElementById('card-container');            const cardFront = document.getElementById('card-front');            const cardBack = document.getElementById('card-back');            const cardCounter = document.getElementById('card-counter');            const flipBtn = document.getElementById('flip-btn');            const nextBtn = document.getElementById('next-btn');            const prevBtn = document.getElementById('prev-btn');            function renderCard() {                if (!cards || cards.length === 0) { cardFront.textContent = 'Tidak ada kartu.'; cardCounter.textContent = '0 / 0'; return; };                const card = cards[currentIndex];                cardFront.textContent = card.question;                cardBack.textContent = card.answer;                cardCounter.textContent = \`\${currentIndex + 1} / \${cards.length}\`;                cardContainer.classList.remove('is-flipped');            }            flipBtn.addEventListener('click', () => cardContainer.classList.toggle('is-flipped'));            nextBtn.addEventListener('click', () => { currentIndex = (currentIndex + 1) % cards.length; renderCard(); });            prevBtn.addEventListener('click', () => { currentIndex = (currentIndex - 1 + cards.length) % cards.length; renderCard(); });            renderCard();        });    <\/script></body></html>`;
+            };
+            const htmlContent = generateStandaloneHTML(deck);
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            const safeFilename = deck.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            a.download = `${safeFilename || 'flashcards'}_flashcards.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        };
+
+        generateBtn.addEventListener('click', async () => {
+            const deckTitle = document.getElementById('deck-title-input').value.trim();
+            const topic = document.getElementById('topic-input').value.trim();
+            if (!topic || !deckTitle) {
+                showAlert('Harap isi Judul dan Materi/Topik untuk membuat kartu.');
+                return;
+            }
+            const cardCount = document.getElementById('card-count-select').value;
+            const generateBtnText = document.getElementById('generate-btn-text');
+            const generateLoader = document.getElementById('generate-loader');
+            generateBtn.disabled = true;
+            generateBtnText.textContent = 'Membuat...';
+            generateLoader.classList.remove('hidden');
+
+            try {
+                const fullPrompt = `Anda adalah AI yang ahli membuat kartu kilas (flashcard). Berdasarkan topik yang diberikan, buatlah ${cardCount} kartu kilas. Setiap kartu harus memiliki "question" (pertanyaan) dan "answer" (jawaban). Kembalikan HANYA array JSON yang valid, tanpa teks atau format tambahan. Contoh format: [{"question": "Q1", "answer": "A1"}, {"question": "Q2", "answer": "A2"}].\n\nTopik: "${topic}"`;
+                const payload = {
+                    prompt: fullPrompt,
+                    key: "" 
+                };
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status} ${response.statusText}`);
+                }
+                const responseText = await response.text();
+                let cleanedJsonText = responseText;
+                if (cleanedJsonText.startsWith('"') && cleanedJsonText.endsWith('"')) {
+                   cleanedJsonText = cleanedJsonText.substring(1, cleanedJsonText.length - 1).replace(/\\"/g, '"').replace(/\\n/g, '\n');
+                }
+                const generatedCards = JSON.parse(cleanedJsonText);
+                if (!Array.isArray(generatedCards) || generatedCards.length === 0) {
+                    throw new Error("API tidak mengembalikan format kartu yang valid.");
+                }
+                const newDeck = {
+                    title: deckTitle,
+                    cards: generatedCards.map(card => ({
+                        ...card,
+                        repetition: 0,
+                        interval: 1,
+                        easeFactor: 2.5,
+                        nextReviewDate: new Date().toISOString()
+                    }))
+                };
+                state.decks.push(newDeck);
+                saveState();
+                renderDecks();
+                document.getElementById('topic-input').value = '';
+                document.getElementById('deck-title-input').value = '';
+
+                // ### PERBAIKAN: Pindah Tab Otomatis ###
+                // Secara otomatis klik tab 'Lihat Set Kartu' untuk menampilkan set baru
+                document.getElementById('tab-decks-btn').click(); 
+
+                showAlert(`Set kartu untuk "${newDeck.title}" berhasil dibuat!`);
+
+            } catch (error) {
+                console.error('Error generating flashcards:', error);
+                showAlert('Maaf, terjadi kesalahan saat membuat kartu. Pastikan format respons dari API sudah benar. Silakan coba lagi.');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtnText.textContent = 'Buat dengan AI';
+                generateLoader.classList.add('hidden');
+            }
+        });
+
+        decksList.addEventListener('click', (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+            const index = target.dataset.index;
+
+            if (target.classList.contains('study-btn')) {
+                state.currentDeckIndex = parseInt(index);
+                const deck = state.decks[state.currentDeckIndex];
+                state.studyQueue = deck.cards
+                    .map((card, idx) => ({ card, idx }))
+                    .filter(item => new Date(item.card.nextReviewDate) <= new Date())
+                    .map(item => item.idx);
+                
+                for (let i = state.studyQueue.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [state.studyQueue[i], state.studyQueue[j]] = [state.studyQueue[j], state.studyQueue[i]];
+                }
+
+                document.getElementById('study-deck-title').textContent = deck.title;
+                // Atur jumlah total kartu di sini
+                document.getElementById('total-cards').textContent = state.studyQueue.length; 
+                
+                showView('study');
+                renderStudyCard();
+            }
+            if (target.classList.contains('download-btn')) {
+                const deckToDownload = state.decks[index];
+                downloadDeckAsHTML(deckToDownload);
+            }
+            if (target.classList.contains('delete-btn')) {
+                showConfirm('Apakah Anda yakin ingin menghapus set kartu ini?', (confirmed) => {
+                    if (confirmed) {
+                        state.decks.splice(index, 1);
+                        saveState();
+                        renderDecks();
+                    }
+                });
+            }
+        });
+
+        document.getElementById('back-to-home-btn').addEventListener('click', () => {
+            showView('home');
+            renderDecks();
+        });
+
+        document.getElementById('flip-card-btn').addEventListener('click', () => {
+            document.getElementById('study-card-container').classList.add('is-flipped');
+            document.getElementById('flip-button-container').classList.add('hidden');
+            document.getElementById('srs-buttons-container').classList.remove('hidden');
+        });
+
+        document.querySelectorAll('.srs-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const quality = parseInt(e.target.dataset.quality);
+                const cardIndexInDeck = state.studyQueue[0];
+                updateSRS(cardIndexInDeck, quality);
+                state.studyQueue.shift();
+                saveState();
+                setTimeout(renderStudyCard, 300);
+            });
+        });
+
+        // --- Initialization ---
+        const init = () => {
+            loadState();
+            renderDecks();
+            showView('home');
+        };
+
+        init();
+    });
+    </script>
+</body>
+  
+</html> 
