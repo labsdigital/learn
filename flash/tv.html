@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html class="dark" lang="id">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SmartLearn - TV Edition</title>
+    <title>Studi AI - TV Edition</title>
     
     <!-- 1. Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -85,13 +86,13 @@
 
     <div id="app" class="safe-area">
         
-        <!-- HEADER GLOBAL -->
-        <header class="flex items-center justify-between mb-8 shrink-0">
+        <!-- HEADER GLOBAL (Diberi ID agar bisa di-toggle) -->
+        <header id="global-header" class="flex items-center justify-between mb-8 shrink-0 transition-all duration-300">
             <div class="flex items-center gap-4">
                 <div class="p-3 bg-primary rounded-xl">
                     <span class="material-symbols-outlined text-4xl text-white">school</span>
                 </div>
-                <h1 class="text-4xl font-bold tracking-tight">SmartLearn <span class="text-slate-400 font-normal text-2xl ml-2">TV Edition</span></h1>
+                <h1 class="text-4xl font-bold tracking-tight">Studi AI <span class="text-slate-400 font-normal text-2xl ml-2">TV Edition</span></h1>
             </div>
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-lg border border-slate-700">
@@ -145,9 +146,9 @@
                         </button>
                     </div>
 
-                    <input type="text" id="form-title" class="tv-focusable bg-slate-800 text-white text-2xl p-6 rounded-xl border-2 border-slate-700 placeholder-slate-500" placeholder="Judul (Misal: Fotosintesis)" />
+                    <input type="text" id="form-title" class="tv-focusable bg-slate-800 text-white text-2xl p-6 rounded-xl border-2 border-slate-700 placeholder-slate-500" placeholder="Judul (Misal: Ibukota)" />
                     
-                    <textarea id="form-description" rows="3" class="tv-focusable bg-slate-800 text-white text-2xl p-6 rounded-xl border-2 border-slate-700 placeholder-slate-500" placeholder="Topik Materi (Misal: Proses Fotosintesis - IPAS Kelas 5 SD)"></textarea>
+                    <textarea id="form-description" rows="3" class="tv-focusable bg-slate-800 text-white text-2xl p-6 rounded-xl border-2 border-slate-700 placeholder-slate-500" placeholder="Topik Materi (Misal: Negara ASEAN)"></textarea>
 
                     <button id="btn-generate" class="tv-focusable bg-green-600 text-white text-2xl font-bold p-6 rounded-xl mt-4 flex items-center justify-center gap-3">
                         <span class="material-symbols-outlined text-4xl">auto_awesome</span>
@@ -172,22 +173,29 @@
         </div>
 
         <!-- =================================================================== -->
-        <!-- HALAMAN 3: FLASHCARD PLAYER (Cinema Mode)                           -->
+        <!-- HALAMAN 3: FLASHCARD PLAYER (Cinema Mode - Side Navigation)         -->
         <!-- =================================================================== -->
         <div id="page-flashcard-player" class="hidden flex-1 flex flex-col min-h-0 relative">
-            <!-- Header Info -->
-            <div class="flex justify-between items-center mb-6">
-                <button class="tv-focusable flex items-center gap-2 text-slate-400 px-4 py-2 rounded-lg" onclick="navigate('page-deck-list')">
+            <!-- Header Info (Tombol Kembali ada di sini) -->
+            <div class="flex justify-between items-center mb-2 shrink-0 pt-2">
+                <button class="tv-focusable flex items-center gap-2 text-slate-400 px-4 py-2 rounded-lg z-30 bg-slate-800/50 backdrop-blur" onclick="navigate('page-deck-list')">
                     <span class="material-symbols-outlined">arrow_back</span> Kembali
                 </button>
-                <div class="text-2xl font-mono text-primary bg-primary/10 px-6 py-2 rounded-full">
+                <div class="text-2xl font-mono text-primary bg-primary/10 px-6 py-2 rounded-full z-30">
                     <span id="fc-idx">1</span> / <span id="fc-total">10</span>
                 </div>
             </div>
 
-            <!-- Card Stage -->
-            <div class="flex-1 flex items-center justify-center perspective-container">
-                <div class="w-2/3 aspect-video flip-card-container">
+            <!-- Main Stage (Card + Floating Buttons) -->
+            <div class="flex-1 relative flex items-center justify-center px-4">
+                
+                <!-- Tombol Kiri (Floating Absolute) -->
+                <button id="btn-fc-prev" class="absolute left-0 top-1/2 -translate-y-1/2 z-20 tv-focusable p-6 rounded-full bg-slate-800/90 hover:bg-slate-700 text-white transition-all disabled:opacity-20 disabled:cursor-not-allowed shrink-0 shadow-2xl border border-slate-600" onclick="prevFlashcard()">
+                    <span class="material-symbols-outlined text-6xl">chevron_left</span>
+                </button>
+
+                <!-- Card Container -->
+                <div class="w-3/4 h-full max-h-[70vh] flip-card-container z-10">
                     <div id="flashcard-inner" class="tv-focusable flip-card-inner cursor-pointer rounded-3xl" tabindex="0">
                         <!-- Front -->
                         <div class="card-front bg-card-tv border-4 border-slate-700 flex flex-col items-center justify-center p-12 text-center shadow-2xl">
@@ -205,18 +213,17 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Controls (UPDATED: Now clickable buttons) -->
-            <div class="flex justify-center gap-12 mt-8 text-slate-400">
-                <button id="btn-fc-prev" class="tv-focusable flex items-center gap-2 px-6 py-3 rounded-2xl hover:bg-slate-800 transition-colors" onclick="prevFlashcard()">
-                    <span class="material-symbols-outlined text-4xl bg-slate-800 p-2 rounded-lg">arrow_left</span>
-                    <span class="text-xl font-bold">Sebelumnya</span>
+                <!-- Tombol Kanan (Floating Absolute) -->
+                <button id="btn-fc-next" class="absolute right-0 top-1/2 -translate-y-1/2 z-20 tv-focusable p-6 rounded-full bg-slate-800/90 hover:bg-slate-700 text-white transition-all disabled:opacity-20 disabled:cursor-not-allowed shrink-0 shadow-2xl border border-slate-600" onclick="nextFlashcard()">
+                    <span class="material-symbols-outlined text-6xl">chevron_right</span>
                 </button>
-                <button id="btn-fc-next" class="tv-focusable flex items-center gap-2 px-6 py-3 rounded-2xl hover:bg-slate-800 transition-colors" onclick="nextFlashcard()">
-                    <span class="text-xl font-bold">Selanjutnya</span>
-                    <span class="material-symbols-outlined text-4xl bg-slate-800 p-2 rounded-lg">arrow_right</span>
-                </button>
+
+            </div>
+            
+            <!-- Footer Hint -->
+            <div class="text-center text-slate-500 py-4 shrink-0">
+                Gunakan tombol panah Kiri/Kanan pada remote atau pilih tombol di layar
             </div>
         </div>
 
@@ -224,9 +231,9 @@
         <!-- HALAMAN 4: KUIS PLAYER (TV Show Style)                              -->
         <!-- =================================================================== -->
         <div id="page-quiz-player" class="hidden flex-1 flex flex-col min-h-0">
-             <div class="flex justify-between items-center mb-4">
+             <div class="flex justify-between items-center mb-4 pt-4">
                 <button class="tv-focusable flex items-center gap-2 text-slate-400 px-4 py-2 rounded-lg" onclick="navigate('page-deck-list')">
-                    Keluar
+                    <span class="material-symbols-outlined">arrow_back</span> Keluar
                 </button>
                 <div class="w-64 h-4 bg-slate-700 rounded-full overflow-hidden">
                     <div id="quiz-progress-bar" class="h-full bg-green-500 transition-all duration-500" style="width: 0%"></div>
@@ -386,6 +393,14 @@
         function navigate(pageId) {
             document.querySelectorAll('div[id^="page-"]').forEach(p => p.classList.add('hidden'));
             document.getElementById(pageId).classList.remove('hidden');
+            
+            // Toggle Global Header visibility
+            const globalHeader = document.getElementById('global-header');
+            if (pageId === 'page-flashcard-player' || pageId === 'page-quiz-player') {
+                globalHeader.classList.add('hidden');
+            } else {
+                globalHeader.classList.remove('hidden');
+            }
             
             // Khusus Flashcard Reset
             if (pageId === 'page-flashcard-player') {
