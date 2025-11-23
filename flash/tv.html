@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html class="dark" lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Studi AI - TV Edition</title>
+    
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Load Google Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    
+    <!-- 3. Konfigurasi Tailwind & CSS Kustom -->
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#3b82f6",
+                        focus: "#facc15", /* Kuning terang untuk fokus TV */
+                        "bg-tv": "#0f172a",
+                        "card-tv": "#1e293b",  
+                    },
+                    fontFamily: {
+                        display: ["Lexend", "sans-serif"],
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        body {
+            background-color: #0f172a; /* Force Dark Background */
+            color: #f8fafc;
+            overflow: hidden; /* Mencegah scrollbar default browser TV */
+            user-select: none;
+        }
+        
+        /* Focus State untuk TV - Sangat Penting */
+        .tv-focusable {
+            transition: all 0.2s ease;
+            outline: none;
+            border: 4px solid transparent;
+        }
+        
+        .tv-focusable.is-focused {
+            border-color: #facc15 !important; /* Border Kuning */
+            transform: scale(1.02);
+            background-color: #334155 !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            z-index: 50;
+        }
+
+        /* Flip Card Effect */
+        .flip-card-container { perspective: 1000px; }
+        .flip-card-inner {
+            position: relative; width: 100%; height: 100%;
+            transition: transform 0.8s;
+            transform-style: preserve-3d;
+        }
+        .flip-card-inner.is-flipped { transform: rotateY(180deg); }
+        .card-front, .card-back {
+            position: absolute; width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1.5rem;
+        }
+        .card-back { transform: rotateY(180deg); }
+
+        /* Overscan Protection (Jarak aman layar TV) */
+        .safe-area {
+            padding: 3rem 4rem; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body class="font-display">
+
+    <div id="app" class="safe-area">
+        
+        <!-- HEADER GLOBAL -->
+        <header class="flex items-center justify-between mb-8 shrink-0">
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-primary rounded-xl">
+                    <span class="material-symbols-outlined text-4xl text-white">school</span>
+                </div>
+                <h1 class="text-4xl font-bold tracking-tight">Studi AI <span class="text-slate-400 font-normal text-2xl ml-2">TV Edition</span></h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-lg border border-slate-700">
+                    <span class="material-symbols-outlined text-yellow-400">control_camera</span>
+                    <span class="text-sm text-slate-300">Gunakan Remote / Arrow Keys</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- =================================================================== -->
+        <!-- HALAMAN 1: DASHBOARD (GRID LAYOUT)                                  -->
+        <!-- =================================================================== -->
+        <div id="page-deck-list" class="flex-1 flex flex-col min-h-0">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl text-slate-300">Unit Saya</h2>
+                <button id="btn-add-unit" class="tv-focusable flex items-center gap-3 bg-primary px-8 py-4 rounded-xl text-xl font-bold hover:bg-primary/80" onclick="navigate('page-create-form')">
+                    <span class="material-symbols-outlined text-3xl">add_circle</span>
+                    Buat Baru
+                </button>
+            </div>
+
+            <main id="unit-grid" class="grid grid-cols-3 gap-8 overflow-y-auto p-2 pb-10 flex-1">
+                <!-- Unit Cards Injected Here -->
+            </main>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden flex-1 flex flex-col items-center justify-center text-slate-500">
+                <span class="material-symbols-outlined text-9xl opacity-20 mb-4">dashboard</span>
+                <p class="text-3xl font-medium">Belum ada unit.</p>
+                <p class="text-xl mt-2">Pilih "Buat Baru" di pojok kanan atas.</p>
+            </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- HALAMAN 2: FORMULIR BUAT UNIT (Simplified for TV)                   -->
+        <!-- =================================================================== -->
+        <div id="page-create-form" class="hidden flex-1 flex flex-col min-h-0">
+            <h2 class="text-3xl font-bold mb-8">Buat Unit Baru (AI)</h2>
+            
+            <div class="grid grid-cols-2 gap-12 h-full">
+                <!-- Form Area -->
+                <div class="flex flex-col gap-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <button type="button" class="tv-focusable bg-card-tv p-6 rounded-2xl border-2 border-slate-700 flex flex-col items-center gap-2 group selected-type" data-value="flashcard" onclick="selectType(this, 'flashcard')">
+                            <span class="material-symbols-outlined text-5xl text-primary">style</span>
+                            <span class="text-xl font-bold">Flashcard</span>
+                        </button>
+                        <button type="button" class="tv-focusable bg-card-tv p-6 rounded-2xl border-2 border-slate-700 flex flex-col items-center gap-2 group" data-value="quiz" onclick="selectType(this, 'quiz')">
+                            <span class="material-symbols-outlined text-5xl text-primary">quiz</span>
+                            <span class="text-xl font-bold">Kuis</span>
+                        </button>
+                    </div>
+
+                    <input type="text" id="form-title" class="tv-focusable bg-slate-800 text-white text-2xl p-6 rounded-xl border-2 border-slate-700 placeholder-slate-500" placeholder="Judul (Misal: Ibukota)" />
+                    
+                    <textarea id="form-description" rows="3" class="tv-focusable bg-slate-800 text-white text-2xl p-6 rounded-xl border-2 border-slate-700 placeholder-slate-500" placeholder="Topik Materi (Misal: Negara ASEAN)"></textarea>
+
+                    <button id="btn-generate" class="tv-focusable bg-green-600 text-white text-2xl font-bold p-6 rounded-xl mt-4 flex items-center justify-center gap-3">
+                        <span class="material-symbols-outlined text-4xl">auto_awesome</span>
+                        Generate dengan AI
+                    </button>
+                    
+                    <button class="tv-focusable bg-slate-700 text-white text-xl font-medium p-4 rounded-xl" onclick="navigate('page-deck-list')">
+                        Batal
+                    </button>
+                </div>
+
+                <!-- Info Area -->
+                <div class="flex flex-col justify-center items-center text-center p-8 bg-slate-800/50 rounded-3xl border border-slate-700">
+                    <span class="material-symbols-outlined text-8xl text-yellow-400 mb-6">tips_and_updates</span>
+                    <h3 class="text-3xl font-bold mb-4">Tips Mengetik di TV</h3>
+                    <p class="text-xl text-slate-400 leading-relaxed">
+                        Gunakan keyboard virtual TV Anda saat fokus pada kolom input. <br>
+                        Pastikan topik jelas agar AI dapat membuat soal yang akurat.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- HALAMAN 3: FLASHCARD PLAYER (Cinema Mode)                           -->
+        <!-- =================================================================== -->
+        <div id="page-flashcard-player" class="hidden flex-1 flex flex-col min-h-0 relative">
+            <!-- Header Info -->
+            <div class="flex justify-between items-center mb-6">
+                <button class="tv-focusable flex items-center gap-2 text-slate-400 px-4 py-2 rounded-lg" onclick="navigate('page-deck-list')">
+                    <span class="material-symbols-outlined">arrow_back</span> Kembali
+                </button>
+                <div class="text-2xl font-mono text-primary bg-primary/10 px-6 py-2 rounded-full">
+                    <span id="fc-idx">1</span> / <span id="fc-total">10</span>
+                </div>
+            </div>
+
+            <!-- Card Stage -->
+            <div class="flex-1 flex items-center justify-center perspective-container">
+                <div class="w-2/3 aspect-video flip-card-container">
+                    <div id="flashcard-inner" class="tv-focusable flip-card-inner cursor-pointer rounded-3xl" tabindex="0">
+                        <!-- Front -->
+                        <div class="card-front bg-card-tv border-4 border-slate-700 flex flex-col items-center justify-center p-12 text-center shadow-2xl">
+                            <span class="text-primary font-bold text-2xl mb-4 tracking-widest uppercase">Pertanyaan</span>
+                            <p id="fc-front" class="text-5xl font-bold leading-tight">...</p>
+                            <div class="absolute bottom-8 text-slate-500 text-lg flex items-center gap-2">
+                                <span class="material-symbols-outlined bg-slate-700 rounded p-1">keyboard_return</span>
+                                Tekan OK untuk membalik
+                            </div>
+                        </div>
+                        <!-- Back -->
+                        <div class="card-back bg-indigo-900 border-4 border-indigo-500 flex flex-col items-center justify-center p-12 text-center shadow-2xl">
+                            <span class="text-indigo-300 font-bold text-2xl mb-4 tracking-widest uppercase">Jawaban</span>
+                            <p id="fc-back" class="text-4xl font-medium leading-relaxed">...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls Hints -->
+            <div class="flex justify-center gap-12 mt-8 text-slate-400">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-4xl bg-slate-800 p-2 rounded-lg">arrow_left</span>
+                    <span class="text-xl">Sebelumnya</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">Selanjutnya</span>
+                    <span class="material-symbols-outlined text-4xl bg-slate-800 p-2 rounded-lg">arrow_right</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- HALAMAN 4: KUIS PLAYER (TV Show Style)                              -->
+        <!-- =================================================================== -->
+        <div id="page-quiz-player" class="hidden flex-1 flex flex-col min-h-0">
+             <div class="flex justify-between items-center mb-4">
+                <button class="tv-focusable flex items-center gap-2 text-slate-400 px-4 py-2 rounded-lg" onclick="navigate('page-deck-list')">
+                    Keluar
+                </button>
+                <div class="w-64 h-4 bg-slate-700 rounded-full overflow-hidden">
+                    <div id="quiz-progress-bar" class="h-full bg-green-500 transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="flex-1 grid grid-cols-12 gap-8">
+                <!-- Soal -->
+                <div class="col-span-5 flex items-center">
+                    <h1 id="quiz-question" class="text-4xl font-bold leading-tight text-white">Pertanyaan Kuis...</h1>
+                </div>
+
+                <!-- Pilihan Jawaban -->
+                <div class="col-span-7 flex flex-col justify-center gap-4" id="quiz-options-container">
+                    <!-- Options injected via JS -->
+                </div>
+            </div>
+
+             <!-- Feedback Area -->
+             <div id="quiz-feedback" class="h-20 flex items-center justify-center text-3xl font-bold transition-opacity opacity-0">
+                <!-- Benar/Salah Message -->
+             </div>
+        </div>
+
+        <!-- LOADING OVERLAY -->
+        <div id="loading-overlay" class="fixed inset-0 z-[60] bg-black/80 flex flex-col items-center justify-center hidden">
+            <div class="w-24 h-24 border-8 border-t-primary border-slate-700 rounded-full animate-spin mb-8"></div>
+            <h2 class="text-3xl font-bold animate-pulse">Sedang Berpikir...</h2>
+        </div>
+        
+        <!-- RESULT OVERLAY -->
+        <div id="result-overlay" class="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center hidden transition-opacity duration-300">
+            <span class="material-symbols-outlined text-9xl text-yellow-400 mb-6">emoji_events</span>
+            <h1 class="text-6xl font-bold text-white mb-4">Selesai!</h1>
+            <p class="text-3xl text-slate-300 mb-12">Skor Anda: <span id="result-score" class="text-primary font-bold">8/10</span></p>
+            <button id="btn-result-home" class="tv-focusable bg-primary px-12 py-5 rounded-2xl text-2xl font-bold text-white">
+                Kembali ke Menu Utama
+            </button>
+        </div>
+
+    </div>
+
+    <!-- LOGIC -->
+    <script>
+        // --- CONFIG & STATE ---
+        const API_URL = 'https://taraka.id/apigate/cr-llama.php';
+        let db = { units: [] };
+        let currentUnit = null;
+        let currentIndex = 0;
+        let quizScore = 0;
+        let isQuizAnswered = false;
+        
+        // Remote Control State
+        let focusableElements = [];
+        let currentFocusIndex = 0;
+
+        // --- INIT ---
+        window.onload = () => {
+            loadDB();
+            renderDeckList();
+            updateFocusList(); // Initialize Focus
+        };
+
+        // --- REMOTE CONTROL SYSTEM (The Heart of TV App) ---
+        document.addEventListener('keydown', (e) => {
+            // Mapping tombol remote umum
+            const key = e.key;
+            
+            // Spatial Navigation Sederhana (Berdasarkan urutan DOM)
+            if (key === 'ArrowDown' || key === 'ArrowRight') {
+                moveFocus(1);
+                e.preventDefault();
+            } else if (key === 'ArrowUp' || key === 'ArrowLeft') {
+                moveFocus(-1);
+                e.preventDefault();
+            } else if (key === 'Enter') {
+                triggerActiveElement();
+            } else if (key === 'Backspace' || key === 'Escape') {
+                // Tombol Back pada remote
+                handleBackKey();
+            }
+        });
+
+        function updateFocusList() {
+            // Cari semua elemen yang terlihat dan memiliki class 'tv-focusable'
+            const visiblePage = document.querySelector('div[id^="page-"]:not(.hidden)');
+            if (!visiblePage) {
+                // Overlay handling
+                if(!document.getElementById('result-overlay').classList.contains('hidden')){
+                    focusableElements = Array.from(document.getElementById('result-overlay').querySelectorAll('.tv-focusable'));
+                } else {
+                    return;
+                }
+            } else {
+                focusableElements = Array.from(visiblePage.querySelectorAll('.tv-focusable'));
+            }
+
+            currentFocusIndex = 0;
+            if (focusableElements.length > 0) {
+                setFocus(0);
+            }
+        }
+
+        function moveFocus(direction) {
+            if (focusableElements.length === 0) return;
+            
+            // Hapus fokus lama
+            focusableElements[currentFocusIndex].classList.remove('is-focused');
+            
+            // Hitung index baru (looping)
+            currentFocusIndex += direction;
+            if (currentFocusIndex >= focusableElements.length) currentFocusIndex = 0;
+            if (currentFocusIndex < 0) currentFocusIndex = focusableElements.length - 1;
+            
+            setFocus(currentFocusIndex);
+        }
+
+        function setFocus(index) {
+            const el = focusableElements[index];
+            el.classList.add('is-focused');
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.focus({ preventScroll: true }); // Native focus untuk input
+        }
+
+        function triggerActiveElement() {
+            if (focusableElements.length === 0) return;
+            const el = focusableElements[currentFocusIndex];
+            el.click();
+        }
+
+        function handleBackKey() {
+            const resultOverlay = document.getElementById('result-overlay');
+            if (!resultOverlay.classList.contains('hidden')) {
+                document.getElementById('btn-result-home').click();
+                return;
+            }
+
+            const visiblePage = document.querySelector('div[id^="page-"]:not(.hidden)');
+            if (visiblePage.id !== 'page-deck-list') {
+                navigate('page-deck-list');
+            }
+        }
+
+        // --- NAVIGATION ---
+        function navigate(pageId) {
+            document.querySelectorAll('div[id^="page-"]').forEach(p => p.classList.add('hidden'));
+            document.getElementById(pageId).classList.remove('hidden');
+            
+            // Khusus Flashcard Reset
+            if (pageId === 'page-flashcard-player') {
+                const inner = document.getElementById('flashcard-inner');
+                inner.classList.remove('is-flipped');
+            }
+
+            // Tunggu DOM render, lalu update fokus
+            setTimeout(updateFocusList, 100);
+        }
+
+        // --- DATA MANAGEMENT ---
+        function loadDB() {
+            const data = localStorage.getItem('tv_edu_app');
+            if (data) db = JSON.parse(data);
+        }
+
+        function saveDB() {
+            localStorage.setItem('tv_edu_app', JSON.stringify(db));
+        }
+
+        // --- PAGE: DECK LIST ---
+        function renderDeckList() {
+            const container = document.getElementById('unit-grid');
+            const empty = document.getElementById('empty-state');
+            container.innerHTML = '';
+
+            if (db.units.length === 0) {
+                empty.classList.remove('hidden');
+                // Fokus ke tombol add jika list kosong
+                setTimeout(() => {
+                    const btn = document.getElementById('btn-add-unit');
+                    focusableElements = [btn];
+                    setFocus(0);
+                }, 100);
+            } else {
+                empty.classList.add('hidden');
+                db.units.forEach((unit, idx) => {
+                    const icon = unit.type === 'flashcard' ? 'style' : 'quiz';
+                    const color = unit.type === 'flashcard' ? 'text-blue-400' : 'text-purple-400';
+                    const html = `
+                        <div class="tv-focusable bg-card-tv p-6 rounded-2xl border border-slate-700 flex flex-col justify-between h-48 group relative" onclick="playUnit('${unit.id}')">
+                            <div class="flex justify-between items-start">
+                                <span class="material-symbols-outlined ${color} text-5xl">${icon}</span>
+                                <button class="z-10 text-slate-500 hover:text-red-500 p-2" onclick="deleteUnit(event, '${unit.id}')">
+                                    <span class="material-symbols-outlined text-3xl">delete</span>
+                                </button>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold text-white line-clamp-1 group-hover:text-yellow-400 transition-colors">${unit.title}</h3>
+                                <p class="text-lg text-slate-400">${unit.count} Item</p>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += html;
+                });
+            }
+        }
+
+        function playUnit(id) {
+            currentUnit = db.units.find(u => u.id === id);
+            currentIndex = 0;
+            if (currentUnit.type === 'flashcard') {
+                renderFlashcard();
+                navigate('page-flashcard-player');
+                // Hook arrow keys for flashcard
+                document.onkeydown = (e) => {
+                    if (document.getElementById('page-flashcard-player').classList.contains('hidden')) return;
+                    if (e.key === 'ArrowRight') nextFlashcard();
+                    if (e.key === 'ArrowLeft') prevFlashcard();
+                    if (e.key === 'Enter') document.getElementById('flashcard-inner').click();
+                    if (e.key === 'Backspace' || e.key === 'Escape') navigate('page-deck-list');
+                };
+            } else {
+                quizScore = 0;
+                renderQuiz();
+                navigate('page-quiz-player');
+            }
+        }
+
+        function deleteUnit(e, id) {
+            e.stopPropagation();
+            if (confirm('Hapus unit ini?')) {
+                db.units = db.units.filter(u => u.id !== id);
+                saveDB();
+                renderDeckList();
+                updateFocusList();
+            }
+        }
+
+        // --- PAGE: CREATE ---
+        let selectedType = 'flashcard';
+        function selectType(el, type) {
+            selectedType = type;
+            document.querySelectorAll('.selected-type').forEach(b => {
+                b.classList.remove('border-primary', 'bg-primary/20');
+                b.classList.add('border-slate-700');
+            });
+            el.classList.remove('border-slate-700');
+            el.classList.add('border-primary', 'bg-primary/20', 'selected-type');
+        }
+
+        document.getElementById('btn-generate').addEventListener('click', async () => {
+            const title = document.getElementById('form-title').value;
+            const desc = document.getElementById('form-description').value;
+            
+            if (!title || !desc) return alert("Isi judul dan topik!");
+
+            document.getElementById('loading-overlay').classList.remove('hidden');
+            document.getElementById('loading-overlay').classList.add('flex');
+
+            // AI PROMPT LOGIC
+            const system = "Anda asisten pendidikan. HANYA Jawab JSON valid.";
+            let prompt = "";
+            if (selectedType === 'flashcard') {
+                prompt = `Topik: ${desc}\nJumlah: 5\nBuat materi flashcard JSON format: {"cards": [{"term": "...", "definition": "..."}]}`;
+            } else {
+                prompt = `Topik: ${desc}\nJumlah: 5\nBuat materi kuis JSON format: {"questions": [{"question": "...", "options": ["A","B","C","D"], "answer": "text exact match"}]}`;
+            }
+
+            try {
+                const req = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ prompt, system })
+                });
+                let text = await req.text();
+                // Basic cleanup for messy LLM output
+                text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                if (text.startsWith('"')) text = JSON.parse(text); // Double stringified check
+                
+                const data = JSON.parse(text);
+                
+                const newUnit = {
+                    id: Date.now().toString(),
+                    title: title,
+                    type: selectedType,
+                    count: 5,
+                    ...data
+                };
+                
+                db.units.push(newUnit);
+                saveDB();
+                document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('form-title').value = '';
+                document.getElementById('form-description').value = '';
+                renderDeckList();
+                navigate('page-deck-list');
+
+            } catch (e) {
+                alert("Gagal membuat unit. Coba topik yang lebih spesifik.");
+                document.getElementById('loading-overlay').classList.add('hidden');
+            }
+        });
+
+        // --- PAGE: FLASHCARD ---
+        function renderFlashcard() {
+            const card = currentUnit.cards[currentIndex];
+            document.getElementById('fc-idx').innerText = currentIndex + 1;
+            document.getElementById('fc-total').innerText = currentUnit.cards.length;
+            document.getElementById('fc-front').innerText = card.term;
+            document.getElementById('fc-back').innerText = card.definition;
+            
+            // Reset focus to card
+            setTimeout(() => {
+                focusableElements = [document.getElementById('flashcard-inner')];
+                setFocus(0);
+            }, 50);
+        }
+
+        document.getElementById('flashcard-inner').addEventListener('click', function() {
+            this.classList.toggle('is-flipped');
+        });
+
+        function nextFlashcard() {
+            if (currentIndex < currentUnit.cards.length - 1) {
+                currentIndex++;
+                document.getElementById('flashcard-inner').classList.remove('is-flipped');
+                setTimeout(renderFlashcard, 300);
+            }
+        }
+
+        function prevFlashcard() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                document.getElementById('flashcard-inner').classList.remove('is-flipped');
+                setTimeout(renderFlashcard, 300);
+            }
+        }
+
+        // --- PAGE: QUIZ ---
+        function renderQuiz() {
+            isQuizAnswered = false;
+            const q = currentUnit.questions[currentIndex];
+            const total = currentUnit.questions.length;
+            
+            document.getElementById('quiz-question').innerText = q.question;
+            document.getElementById('quiz-progress-bar').style.width = `${((currentIndex) / total) * 100}%`;
+
+            const container = document.getElementById('quiz-options-container');
+            container.innerHTML = '';
+            
+            // Shuffle options
+            const opts = [...q.options].sort(() => Math.random() - 0.5);
+
+            opts.forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.className = 'tv-focusable bg-card-tv p-6 rounded-2xl border-2 border-slate-700 text-left text-2xl font-medium text-white transition-colors';
+                btn.innerText = opt;
+                btn.onclick = () => handleQuizAnswer(btn, opt, q.answer);
+                container.appendChild(btn);
+            });
+
+            // Update focus list manually for quiz items
+            setTimeout(updateFocusList, 50);
+        }
+
+        function handleQuizAnswer(btn, selected, correct) {
+            if (isQuizAnswered) return;
+            isQuizAnswered = true;
+
+            const feedback = document.getElementById('quiz-feedback');
+            feedback.classList.remove('opacity-0');
+
+            if (selected === correct) {
+                quizScore++;
+                btn.classList.add('bg-green-600', 'border-green-400');
+                feedback.innerHTML = '<span class="text-green-400 flex items-center gap-2"><span class="material-symbols-outlined text-4xl">check_circle</span> Benar!</span>';
+            } else {
+                btn.classList.add('bg-red-600', 'border-red-400');
+                feedback.innerHTML = `<span class="text-red-400 flex items-center gap-2"><span class="material-symbols-outlined text-4xl">cancel</span> Salah. Jawaban: ${correct}</span>`;
+            }
+
+            // Auto advance after 2 seconds
+            setTimeout(() => {
+                feedback.classList.add('opacity-0');
+                if (currentIndex < currentUnit.questions.length - 1) {
+                    currentIndex++;
+                    renderQuiz();
+                } else {
+                    showResult();
+                }
+            }, 2000);
+        }
+
+        function showResult() {
+            const overlay = document.getElementById('result-overlay');
+            document.getElementById('result-score').innerText = `${quizScore} / ${currentUnit.questions.length}`;
+            overlay.classList.remove('hidden');
+            
+            // Focus on home button inside overlay
+            setTimeout(() => {
+                const homeBtn = document.getElementById('btn-result-home');
+                focusableElements = [homeBtn];
+                setFocus(0);
+                
+                homeBtn.onclick = () => {
+                    overlay.classList.add('hidden');
+                    navigate('page-deck-list');
+                };
+            }, 100);
+        }
+
+    </script>
+</body>
+</html>
