@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi GEOGEBRA Gerak Parabola Interaktif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600&family=Roboto:wght@400;500;700&display=swap');
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f3f4f6;
+            overflow-x: hidden;
+        }
+
+        canvas {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+            cursor: crosshair;
+        }
+
+        .slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .slider-thumb::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .math-font {
+            font-family: 'Roboto Mono', monospace;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col lg:flex-row">
+
+    <!-- Sidebar Controls -->
+    <div class="w-full lg:w-1/4 bg-white p-6 shadow-lg flex flex-col z-10 overflow-y-auto">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2"><i class="fas fa-rocket text-blue-600 mr-2"></i>Gerak Parabola</h1>
+        <p class="text-sm text-gray-500 mb-6">Atur parameter di bawah untuk mensimulasikan gerak peluru.</p>
+
+        <!-- Controls -->
+        <div class="space-y-6 flex-grow">
+            
+            <!-- Velocity Control -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Kecepatan Awal ($v_0$)
+                </label>
+                <div class="flex items-center">
+                    <input type="range" id="velocityInfo" min="1" max="100" value="50" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                    <span class="ml-3 w-16 text-right font-bold text-blue-600 math-font"><span id="valVelocity">50</span> m/s</span>
+                </div>
+            </div>
+
+            <!-- Angle Control -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Sudut Elevasi ($\theta$)
+                </label>
+                <div class="flex items-center">
+                    <input type="range" id="angleInfo" min="0" max="90" value="45" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                    <span class="ml-3 w-16 text-right font-bold text-purple-600 math-font"><span id="valAngle">45</span>°</span>
+                </div>
+            </div>
+
+            <!-- Gravity Control (Optional) -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Gravitasi ($g$)
+                </label>
+                <div class="flex items-center">
+                    <input type="range" id="gravityInfo" min="1.6" max="20" step="0.1" value="9.8" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                    <span class="ml-3 w-16 text-right font-bold text-gray-600 math-font"><span id="valGravity">9.8</span></span>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Bumi: 9.8 m/s²</p>
+            </div>
+
+            <div class="border-t pt-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="btnFire" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-play mr-2"></i> TEMBAK
+                    </button>
+                    <button id="btnReset" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-undo mr-2"></i> RESET
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Stats Panel -->
+        <div class="mt-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+            <h3 class="text-sm font-bold text-blue-800 uppercase mb-2">Data Perhitungan</h3>
+            <div class="grid grid-cols-2 gap-y-2 text-sm text-gray-700 math-font">
+                <div>Waktu ($t$):</div>
+                <div class="text-right font-semibold" id="dispTime">0.00 s</div>
+                
+                <div>Posisi X:</div>
+                <div class="text-right font-semibold" id="dispX">0.00 m</div>
+                
+                <div>Posisi Y:</div>
+                <div class="text-right font-semibold" id="dispY">0.00 m</div>
+                
+                <div class="col-span-2 border-t border-blue-200 my-1"></div>
+
+                <div class="text-green-700">Tinggi Max ($H_{max}$):</div>
+                <div class="text-right font-bold text-green-700" id="resHMax">0.00 m</div>
+
+                <div class="text-indigo-700">Jarak Max ($X_{max}$):</div>
+                <div class="text-right font-bold text-indigo-700" id="resRMax">0.00 m</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas Area -->
+    <div class="flex-grow relative bg-gray-50 flex flex-col">
+        <canvas id="simCanvas" class="w-full h-full block"></canvas>
+        
+        <!-- Floating Label for Mobile/Quick View -->
+        <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded shadow border text-xs text-gray-500 pointer-events-none">
+            Skala: 1 kotak grid = 10 meter
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration & Constants ---
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Physics State
+        let state = {
+            v0: 50,         // m/s
+            angle: 45,      // degrees
+            g: 9.8,         // m/s^2
+            t: 0,           // current time simulation
+            firing: false,
+            landed: false,
+            x: 0,
+            y: 0,
+            path: []        // Array of {x, y} for drawing the trail
+        };
+
+        // UI Elements
+        const ui = {
+            v0: document.getElementById('velocityInfo'),
+            angle: document.getElementById('angleInfo'),
+            g: document.getElementById('gravityInfo'),
+            valV0: document.getElementById('valVelocity'),
+            valAngle: document.getElementById('valAngle'),
+            valG: document.getElementById('valGravity'),
+            btnFire: document.getElementById('btnFire'),
+            btnReset: document.getElementById('btnReset'),
+            // Stats
+            dispTime: document.getElementById('dispTime'),
+            dispX: document.getElementById('dispX'),
+            dispY: document.getElementById('dispY'),
+            resHMax: document.getElementById('resHMax'),
+            resRMax: document.getElementById('resRMax')
+        };
+
+        // Visualization Scale
+        // We want to fit roughly 200m-300m range on screen depending on screen size
+        let scale = 4; // pixels per meter
+        const origin = { x: 60, y: 0 }; // Origin point (x is padding, y is calculated from height)
+
+        // --- Initialization ---
+
+        function resize() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            origin.y = canvas.height - 50; // Ground level
+            draw();
+        }
+
+        window.addEventListener('resize', resize);
+        
+        function init() {
+            // Event Listeners
+            ui.v0.addEventListener('input', (e) => {
+                state.v0 = parseFloat(e.target.value);
+                ui.valV0.textContent = state.v0;
+                if (!state.firing && !state.landed) calculateTheoretical();
+                draw();
+            });
+
+            ui.angle.addEventListener('input', (e) => {
+                state.angle = parseFloat(e.target.value);
+                ui.valAngle.textContent = state.angle;
+                if (!state.firing && !state.landed) calculateTheoretical();
+                draw();
+            });
+
+            ui.g.addEventListener('input', (e) => {
+                state.g = parseFloat(e.target.value);
+                ui.valG.textContent = state.g;
+                if (!state.firing && !state.landed) calculateTheoretical();
+                draw();
+            });
+
+            ui.btnFire.addEventListener('click', fireProjectile);
+            ui.btnReset.addEventListener('click', resetSimulation);
+
+            resize();
+            calculateTheoretical(); // Initial calculation
+        }
+
+        // --- Physics Logic ---
+
+        function toRad(deg) {
+            return deg * Math.PI / 180;
+        }
+
+        function getProjectilePos(t) {
+            const rad = toRad(state.angle);
+            const vx = state.v0 * Math.cos(rad);
+            const vyInitial = state.v0 * Math.sin(rad);
+            
+            const x = vx * t;
+            const y = (vyInitial * t) - (0.5 * state.g * t * t);
+            
+            return { x, y, vx, vy: vyInitial - (state.g * t) };
+        }
+
+        // Pre-calculate theoretical Max Height and Range for UI
+        function calculateTheoretical() {
+            const rad = toRad(state.angle);
+            const v0 = state.v0;
+            const g = state.g;
+            
+            const hMax = (Math.pow(v0 * Math.sin(rad), 2)) / (2 * g);
+            const rMax = (Math.pow(v0, 2) * Math.sin(2 * rad)) / g;
+            const tTotal = (2 * v0 * Math.sin(rad)) / g;
+
+            // Update UI immediately for "Prediction"
+            ui.resHMax.textContent = hMax.toFixed(2) + " m";
+            ui.resRMax.textContent = rMax.toFixed(2) + " m";
+        }
+
+        function fireProjectile() {
+            if (state.firing) return;
+            resetSimulation();
+            state.firing = true;
+            state.landed = false;
+            ui.btnFire.textContent = "DITEMBAKKAN...";
+            ui.btnFire.classList.add('opacity-50', 'cursor-not-allowed');
+            animate();
+        }
+
+        function resetSimulation() {
+            state.firing = false;
+            state.landed = false;
+            state.t = 0;
+            state.x = 0;
+            state.y = 0;
+            state.path = [];
+            ui.btnFire.innerHTML = '<i class="fas fa-play mr-2"></i> TEMBAK';
+            ui.btnFire.classList.remove('opacity-50', 'cursor-not-allowed');
+            calculateTheoretical();
+            draw();
+            updateStats(0, 0, 0);
+        }
+
+        function updateStats(t, x, y) {
+            ui.dispTime.textContent = t.toFixed(2) + " s";
+            ui.dispX.textContent = x.toFixed(2) + " m";
+            ui.dispY.textContent = y.toFixed(2) + " m";
+        }
+
+        // --- Animation Loop ---
+
+        let animationFrameId;
+
+        function animate() {
+            if (!state.firing) return;
+
+            // Time step (approx 60fps)
+            const dt = 1/60; 
+            // We use a multiplier to speed up simulation slightly if needed, but 1x is best for realism
+            state.t += dt * 2; // 2x speed for better UX
+
+            const pos = getProjectilePos(state.t);
+            
+            state.x = pos.x;
+            state.y = pos.y;
+
+            // Check collision with ground
+            if (state.y <= 0 && state.t > 0.1) {
+                state.y = 0;
+                state.landed = true;
+                state.firing = false;
+                
+                // Snap to exact landing point
+                const rad = toRad(state.angle);
+                const exactRange = (Math.pow(state.v0, 2) * Math.sin(2 * rad)) / state.g;
+                state.x = exactRange;
+                
+                ui.btnFire.innerHTML = '<i class="fas fa-play mr-2"></i> TEMBAK LAGI';
+                ui.btnFire.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            // Store path for drawing trail
+            if (state.t % (dt*5)) { // Don't save every single point to save memory
+                 state.path.push({x: state.x, y: state.y});
+            }
+
+            updateStats(state.t, state.x, state.y);
+            draw();
+
+            if (!state.landed) {
+                animationFrameId = requestAnimationFrame(animate);
+            } else {
+                // Final draw to ensure ball is on ground
+                draw();
+            }
+        }
+
+        // --- Rendering ---
+
+        // Convert Physics Coordinates (Meters) to Canvas Coordinates (Pixels)
+        function worldToScreen(x, y) {
+            return {
+                x: origin.x + (x * scale),
+                y: origin.y - (y * scale) // Canvas Y is inverted
+            };
+        }
+
+        function drawGrid() {
+            ctx.beginPath();
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 1;
+
+            const gridSizeMeters = 10;
+            const gridSizePixels = gridSizeMeters * scale;
+
+            // Vertical lines
+            for (let x = origin.x; x < canvas.width; x += gridSizePixels) {
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                // Text
+                ctx.fillStyle = '#9ca3af';
+                ctx.font = '10px Roboto';
+                const meterVal = Math.round((x - origin.x) / scale);
+                ctx.fillText(meterVal, x + 2, origin.y + 15);
+            }
+
+            // Horizontal lines
+            for (let y = origin.y; y > 0; y -= gridSizePixels) {
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                // Text
+                if (y !== origin.y) {
+                    const meterVal = Math.round((origin.y - y) / scale);
+                    ctx.fillText(meterVal, origin.x - 20, y + 3);
+                }
+            }
+            ctx.stroke();
+
+            // Ground
+            ctx.beginPath();
+            ctx.strokeStyle = '#059669'; // Green 600
+            ctx.lineWidth = 3;
+            ctx.moveTo(0, origin.y);
+            ctx.lineTo(canvas.width, origin.y);
+            ctx.stroke();
+
+            // Axes Labels
+            ctx.fillStyle = '#374151';
+            ctx.font = 'bold 12px Roboto';
+            ctx.fillText("Jarak (m)", canvas.width - 60, origin.y - 10);
+            ctx.fillText("Tinggi (m)", origin.x + 10, 20);
+        }
+
+        function drawCannon() {
+            const pos = worldToScreen(0, 0);
+            const barrelLen = 40;
+            const angleRad = toRad(state.angle);
+
+            ctx.save();
+            ctx.translate(pos.x, pos.y);
+            ctx.rotate(-angleRad); // Canvas rotation is clockwise, so negative
+
+            // Cannon Barrel
+            ctx.fillStyle = '#4b5563';
+            ctx.fillRect(0, -10, barrelLen, 20);
+            
+            // Decorative bands
+            ctx.fillStyle = '#1f2937';
+            ctx.fillRect(barrelLen - 5, -11, 5, 22);
+
+            ctx.restore();
+
+            // Wheel base
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, 10, 0, Math.PI * 2);
+            ctx.fillStyle = '#374151';
+            ctx.fill();
+        }
+
+        function drawPrediction() {
+            // Draw a ghost line showing where it will go
+            ctx.beginPath();
+            ctx.strokeStyle = '#93c5fd'; // Light blue
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 2;
+
+            const totalTime = (2 * state.v0 * Math.sin(toRad(state.angle))) / state.g;
+            
+            // Draw 20 points along the curve
+            let start = worldToScreen(0,0);
+            ctx.moveTo(start.x, start.y);
+
+            for(let i = 0; i <= 20; i++) {
+                const t = (i / 20) * totalTime;
+                const posP = getProjectilePos(t);
+                const screenP = worldToScreen(posP.x, posP.y);
+                ctx.lineTo(screenP.x, screenP.y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset dash
+        }
+
+        function drawProjectile() {
+            // Draw Trail
+            if (state.path.length > 0) {
+                ctx.beginPath();
+                ctx.strokeStyle = '#2563eb'; // Blue 600
+                ctx.lineWidth = 3;
+                
+                const start = worldToScreen(0,0);
+                ctx.moveTo(start.x, start.y);
+
+                for (let p of state.path) {
+                    const sp = worldToScreen(p.x, p.y);
+                    ctx.lineTo(sp.x, sp.y);
+                }
+                // Connect to current pos
+                const cur = worldToScreen(state.x, state.y);
+                ctx.lineTo(cur.x, cur.y);
+                ctx.stroke();
+            }
+
+            // Draw Ball
+            const pos = worldToScreen(state.x, state.y);
+            
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = '#dc2626'; // Red
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw Velocity Vector Indicator (optional visual flair)
+            if (state.firing) {
+               // Simple arrow logic could go here
+            }
+        }
+
+        function draw() {
+            // Clear
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawGrid();
+            drawPrediction(); // The "GeoGebra" style dotted line
+            drawProjectile(); // The actual moving ball
+            drawCannon(); // On top of everything at origin
+        }
+
+        // Run
+        init();
+
+    </script>
+</body>
+</html>
