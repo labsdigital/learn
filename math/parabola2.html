@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Gerak Parabola</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .simulation-area {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .canvas-container {
+            flex: 1;
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        canvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
+        }
+
+        .controls {
+            width: 300px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .slider-container {
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .value-display {
+            text-align: center;
+            font-weight: bold;
+            color: #667eea;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+
+        .button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .fire-button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .fire-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .reset-button {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+            color: white;
+        }
+
+        .reset-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(116, 185, 255, 0.4);
+        }
+
+        .info-panel {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .info-value {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .formula {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .formula h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .formula p {
+            color: #856404;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-area {
+                flex-direction: column;
+            }
+            
+            .controls {
+                width: 100%;
+            }
+            
+            canvas {
+                width: 100%;
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Simulasi Gerak Parabola</h1>
+        
+        <div class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="canvas" width="800" height="500"></canvas>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="angleSlider">🎯 Sudut Tembak (θ)</label>
+                    <div class="slider-container">
+                        <input type="range" id="angleSlider" class="slider" min="0" max="90" value="45">
+                    </div>
+                    <div class="value-display" id="angleValue">45°</div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="velocitySlider">⚡ Kecepatan Awal (v₀)</label>
+                    <div class="slider-container">
+                        <input type="range" id="velocitySlider" class="slider" min="10" max="100" value="50">
+                    </div>
+                    <div class="value-display" id="velocityValue">50 m/s</div>
+                </div>
+                
+                <button class="button fire-button" id="fireButton">🚀 TEMBAK!</button>
+                <button class="button reset-button" id="resetButton">🔄 RESET</button>
+                
+                <div class="info-panel">
+                    <div class="info-item">
+                        <span class="info-label">Waktu Terbang:</span>
+                        <span class="info-value" id="timeValue">0.0 s</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Jarak Mendatar:</span>
+                        <span class="info-value" id="distanceValue">0.0 m</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Ketinggian Maks:</span>
+                        <span class="info-value" id="maxHeightValue">0.0 m</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Ketinggian Saat Ini:</span>
+                        <span class="info-value" id="currentHeightValue">0.0 m</span>
+                    </div>
+                </div>
+                
+                <div class="formula">
+                    <h3>📐 Rumus Gerak Parabola</h3>
+                    <p><strong>x = v₀ × cos(θ) × t</strong></p>
+                    <p><strong>y = v₀ × sin(θ) × t - ½ × g × t²</strong></p>
+                    <p><strong>g = 9.8 m/s²</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ParabolicSimulation {
+            constructor() {
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.angleSlider = document.getElementById('angleSlider');
+                this.velocitySlider = document.getElementById('velocitySlider');
+                this.fireButton = document.getElementById('fireButton');
+                this.resetButton = document.getElementById('resetButton');
+                
+                this.angle = 45;
+                this.velocity = 50;
+                this.gravity = 9.8;
+                this.scale = 3; // pixels per meter
+                
+                this.projectile = null;
+                this.trail = [];
+                this.isAnimating = false;
+                this.animationId = null;
+                
+                this.cannonX = 50;
+                this.cannonY = this.canvas.height - 50;
+                
+                this.initEventListeners();
+                this.draw();
+            }
+            
+            initEventListeners() {
+                this.angleSlider.addEventListener('input', (e) => {
+                    this.angle = parseInt(e.target.value);
+                    document.getElementById('angleValue').textContent = this.angle + '°';
+                    if (!this.isAnimating) {
+                        this.draw();
+                    }
+                });
+                
+                this.velocitySlider.addEventListener('input', (e) => {
+                    this.velocity = parseInt(e.target.value);
+                    document.getElementById('velocityValue').textContent = this.velocity + ' m/s';
+                    if (!this.isAnimating) {
+                        this.draw();
+                    }
+                });
+                
+                this.fireButton.addEventListener('click', () => {
+                    if (!this.isAnimating) {
+                        this.fire();
+                    }
+                });
+                
+                this.resetButton.addEventListener('click', () => {
+                    this.reset();
+                });
+            }
+            
+            fire() {
+                this.isAnimating = true;
+                this.trail = [];
+                this.fireButton.textContent = '🚀 MENEMBAK...';
+                this.fireButton.disabled = true;
+                
+                const angleRad = (this.angle * Math.PI) / 180;
+                this.projectile = {
+                    x: this.cannonX,
+                    y: this.cannonY,
+                    vx: this.velocity * Math.cos(angleRad),
+                    vy: -this.velocity * Math.sin(angleRad),
+                    time: 0,
+                    startX: this.cannonX,
+                    startY: this.cannonY
+                };
+                
+                this.animate();
+            }
+            
+            animate() {
+                if (!this.projectile) return;
+                
+                const dt = 0.02; // 20ms time step
+                this.projectile.time += dt;
+                
+                // Update position using physics equations
+                this.projectile.x = this.projectile.startX + this.projectile.vx * this.projectile.time * this.scale;
+                this.projectile.y = this.projectile.startY + this.projectile.vy * this.projectile.time * this.scale + 
+                                   0.5 * this.gravity * this.projectile.time * this.projectile.time * this.scale;
+                
+                // Add to trail
+                this.trail.push({x: this.projectile.x, y: this.projectile.y});
+                if (this.trail.length > 200) {
+                    this.trail.shift();
+                }
+                
+                // Update info display
+                this.updateInfo();
+                
+                // Check if projectile hits ground
+                if (this.projectile.y >= this.canvas.height - 30) {
+                    this.projectile.y = this.canvas.height - 30;
+                    this.isAnimating = false;
+                    this.fireButton.textContent = '🚀 TEMBAK!';
+                    this.fireButton.disabled = false;
+                }
+                
+                this.draw();
+                
+                if (this.isAnimating) {
+                    this.animationId = requestAnimationFrame(() => this.animate());
+                }
+            }
+            
+            updateInfo() {
+                if (!this.projectile) return;
+                
+                const time = this.projectile.time;
+                const distance = (this.projectile.x - this.cannonX) / this.scale;
+                const currentHeight = (this.canvas.height - 30 - this.projectile.y) / this.scale;
+                const maxHeight = (this.velocity * this.velocity * Math.sin((this.angle * Math.PI) / 180) * 
+                                 Math.sin((this.angle * Math.PI) / 180)) / (2 * this.gravity);
+                
+                document.getElementById('timeValue').textContent = time.toFixed(1) + ' s';
+                document.getElementById('distanceValue').textContent = distance.toFixed(1) + ' m';
+                document.getElementById('maxHeightValue').textContent = maxHeight.toFixed(1) + ' m';
+                document.getElementById('currentHeightValue').textContent = Math.max(0, currentHeight).toFixed(1) + ' m';
+            }
+            
+            reset() {
+                this.isAnimating = false;
+                this.projectile = null;
+                this.trail = [];
+                this.fireButton.textContent = '🚀 TEMBAK!';
+                this.fireButton.disabled = false;
+                
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+                
+                // Reset info display
+                document.getElementById('timeValue').textContent = '0.0 s';
+                document.getElementById('distanceValue').textContent = '0.0 m';
+                document.getElementById('currentHeightValue').textContent = '0.0 m';
+                
+                this.draw();
+            }
+            
+            draw() {
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw grid
+                this.drawGrid();
+                
+                // Draw ground
+                this.drawGround();
+                
+                // Draw cannon
+                this.drawCannon();
+                
+                // Draw trail
+                this.drawTrail();
+                
+                // Draw projectile
+                if (this.projectile) {
+                    this.drawProjectile();
+                }
+                
+                // Draw predicted trajectory (when not animating)
+                if (!this.isAnimating) {
+                    this.drawPredictedTrajectory();
+                }
+            }
+            
+            drawGrid() {
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                this.ctx.lineWidth = 1;
+                
+                // Vertical lines
+                for (let x = 0; x < this.canvas.width; x += 50) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.canvas.height);
+                    this.ctx.stroke();
+                }
+                
+                // Horizontal lines
+                for (let y = 0; y < this.canvas.height; y += 50) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.canvas.width, y);
+                    this.ctx.stroke();
+                }
+            }
+            
+            drawGround() {
+                this.ctx.fillStyle = '#8B4513';
+                this.ctx.fillRect(0, this.canvas.height - 30, this.canvas.width, 30);
+                
+                // Grass
+                this.ctx.fillStyle = '#228B22';
+                this.ctx.fillRect(0, this.canvas.height - 35, this.canvas.width, 5);
+            }
+            
+            drawCannon() {
+                const angleRad = (this.angle * Math.PI) / 180;
+                const cannonLength = 40;
+                const cannonWidth = 15;
+                
+                this.ctx.save();
+                this.ctx.translate(this.cannonX, this.cannonY);
+                this.ctx.rotate(-angleRad);
+                
+                // Cannon barrel
+                this.ctx.fillStyle = '#2C3E50';
+                this.ctx.fillRect(0, -cannonWidth/2, cannonLength, cannonWidth);
+                
+                // Cannon wheel
+                this.ctx.restore();
+                this.ctx.fillStyle = '#34495E';
+                this.ctx.beginPath();
+                this.ctx.arc(this.cannonX, this.cannonY, 12, 0, 2 * Math.PI);
+                this.ctx.fill();
+                
+                // Cannon base
+                this.ctx.fillStyle = '#2C3E50';
+                this.ctx.fillRect(this.cannonX - 15, this.cannonY - 8, 30, 16);
+            }
+            
+            drawTrail() {
+                if (this.trail.length < 2) return;
+                
+                this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                
+                for (let i = 0; i < this.trail.length; i++) {
+                    const point = this.trail[i];
+                    if (i === 0) {
+                        this.ctx.moveTo(point.x, point.y);
+                    } else {
+                        this.ctx.lineTo(point.x, point.y);
+                    }
+                }
+                
+                this.ctx.stroke();
+            }
+            
+            drawProjectile() {
+                if (!this.projectile) return;
+                
+                // Projectile
+                this.ctx.fillStyle = '#E74C3C';
+                this.ctx.beginPath();
+                this.ctx.arc(this.projectile.x, this.projectile.y, 6, 0, 2 * Math.PI);
+                this.ctx.fill();
+                
+                // Projectile trail effect
+                this.ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
+                this.ctx.beginPath();
+                this.ctx.arc(this.projectile.x, this.projectile.y, 12, 0, 2 * Math.PI);
+                this.ctx.fill();
+            }
+            
+            drawPredictedTrajectory() {
+                const angleRad = (this.angle * Math.PI) / 180;
+                const vx = this.velocity * Math.cos(angleRad);
+                const vy = -this.velocity * Math.sin(angleRad);
+                
+                this.ctx.strokeStyle = 'rgba(52, 152, 219, 0.5)';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.beginPath();
+                
+                let x = this.cannonX;
+                let y = this.cannonY;
+                this.ctx.moveTo(x, y);
+                
+                for (let t = 0; t < 20; t += 0.1) {
+                    x = this.cannonX + vx * t * this.scale;
+                    y = this.cannonY + vy * t * this.scale + 0.5 * this.gravity * t * t * this.scale;
+                    
+                    if (y >= this.canvas.height - 30) break;
+                    
+                    this.ctx.lineTo(x, y);
+                }
+                
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+            }
+        }
+        
+        // Initialize simulation when page loads
+        window.addEventListener('load', () => {
+            new ParabolicSimulation();
+        });
+    </script>
+</body>
+</html>
