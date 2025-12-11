@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Medan Magnet Interaktif</title>
+    <!-- Menggunakan Tailwind CSS untuk styling cepat -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a202c; /* Dark mode base */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none; /* Mencegah scroll saat drag di mobile */
+        }
+        canvas {
+            display: block;
+        }
+        .panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(4px);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        /* Style untuk slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            margin-top: -6px;
+            cursor: pointer;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- UI Overlay -->
+    <div class="absolute top-4 left-4 z-10 panel p-4 w-64 md:w-80">
+        <h1 class="text-xl font-bold text-gray-800 mb-2">Lab Medan Magnet</h1>
+        <p class="text-sm text-gray-600 mb-4">Geser magnet untuk melihat perubahan garis gaya. Tambahkan besi untuk melihat interaksi gaya tarik.</p>
+        
+        <div class="mb-4">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Kekuatan Magnet</label>
+            <input type="range" id="strengthSlider" min="500" max="3000" value="1500" class="w-full">
+            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Lemah</span>
+                <span>Kuat</span>
+            </div>
+        </div>
+
+        <div class="flex gap-2">
+            <button id="addIronBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded transition">
+                + Tambah Besi
+            </button>
+            <button id="resetBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-semibold py-2 px-4 rounded transition">
+                Reset
+            </button>
+        </div>
+        
+        <div class="mt-4 text-xs text-gray-500 border-t pt-2">
+            <div class="flex items-center gap-2 mb-1">
+                <span class="w-3 h-3 bg-red-500 rounded-sm inline-block"></span> Kutub Utara (N)
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-blue-500 rounded-sm inline-block"></span> Kutub Selatan (S)
+            </div>
+        </div>
+    </div>
+
+    <canvas id="simCanvas"></canvas>
+
+    <script>
+        /**
+         * LOGIKA FISIKA & VISUALISASI
+         * Menggunakan pendekatan Grid Vector untuk medan magnet.
+         * Magnet dimodelkan sebagai dua monopole (Positif/Utara dan Negatif/Selatan).
+         */
+
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // State Variabel
+        let width, height;
+        let magnet = { x: 0, y: 0, width: 160, height: 40, strength: 1500, isDragging: false };
+        let irons = []; // Array untuk menyimpan objek besi
+        let dragOffset = { x: 0, y: 0 };
+        let draggedIronIndex = -1;
+
+        // Grid untuk visualisasi "serbuk besi"
+        const gridSize = 25; 
+        
+        // Inisialisasi
+        function init() {
+            resize();
+            magnet.x = width / 2;
+            magnet.y = height / 2;
+            window.addEventListener('resize', resize);
+            loop();
+        }
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        // Kelas Objek Besi
+        class IronBall {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.radius = 8;
+                this.mass = 1;
+                this.isDragging = false;
+            }
+
+            update() {
+                if (this.isDragging) return;
+
+                // Hitung posisi kutub magnet
+                const northPole = { x: magnet.x + magnet.width/2 - 10, y: magnet.y };
+                const southPole = { x: magnet.x - magnet.width/2 + 10, y: magnet.y };
+
+                // Hitung jarak ke kutub
+                const dxN = northPole.x - this.x;
+                const dyN = northPole.y - this.y;
+                const distN = Math.sqrt(dxN*dxN + dyN*dyN);
+
+                const dxS = southPole.x - this.x;
+                const dyS = southPole.y - this.y;
+                const distS = Math.sqrt(dxS*dxS + dyS*dyS);
+
+                // Gaya Tarik Magnetik (Disederhanakan: F ~ 1/r^2)
+                // Besi ditarik ke KEDUA kutub karena induksi magnetik
+                const forceConst = magnet.strength * 0.05;
+
+                let fx = 0, fy = 0;
+
+                // Tarikan ke Kutub Utara
+                if (distN > 10) {
+                    const f = forceConst / (distN * distN);
+                    fx += f * (dxN / distN);
+                    fy += f * (dyN / distN);
+                }
+
+                // Tarikan ke Kutub Selatan
+                if (distS > 10) {
+                    const f = forceConst / (distS * distS);
+                    fx += f * (dxS / distS);
+                    fy += f * (dyS / distS);
+                }
+
+                // Update Kecepatan
+                this.vx += fx / this.mass;
+                this.vy += fy / this.mass;
+
+                // Friksi (Damping) agar gerakan tidak abadi
+                this.vx *= 0.92;
+                this.vy *= 0.92;
+
+                // Update Posisi
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Deteksi Tabrakan Sederhana dengan Magnet
+                // (Agar besi tidak tembus ke dalam magnet, tapi menempel di pinggir)
+                if (this.x > magnet.x - magnet.width/2 - this.radius && 
+                    this.x < magnet.x + magnet.width/2 + this.radius &&
+                    this.y > magnet.y - magnet.height/2 - this.radius &&
+                    this.y < magnet.y + magnet.height/2 + this.radius) {
+                    
+                    // Logic sederhana: Hentikan jika menabrak (Stick effect)
+                    // Mencari sisi terdekat untuk "nempel"
+                    this.vx = 0;
+                    this.vy = 0;
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#94a3b8'; // Warna besi
+                ctx.fill();
+                ctx.strokeStyle = '#475569';
+                ctx.stroke();
+                
+                // Highlight mengkilap
+                ctx.beginPath();
+                ctx.arc(this.x - 2, this.y - 2, 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+            }
+        }
+
+        // Fungsi Hitung Vektor Medan Magnet di titik (px, py)
+        function calculateField(px, py) {
+            const northPole = { x: magnet.x + magnet.width/2 * 0.8, y: magnet.y };
+            const southPole = { x: magnet.x - magnet.width/2 * 0.8, y: magnet.y };
+
+            // Vektor dari Kutub Utara (Sumber: Menolak muatan uji utara)
+            const dxN = px - northPole.x;
+            const dyN = py - northPole.y;
+            const rN = Math.sqrt(dxN*dxN + dyN*dyN);
+            const magN = magnet.strength / (rN * rN * rN); // 1/r^2 untuk gaya, r^3 untuk komponen vektor normalisasi
+            
+            // Vektor ke Kutub Selatan (Sink: Menarik muatan uji utara)
+            const dxS = px - southPole.x;
+            const dyS = py - southPole.y;
+            const rS = Math.sqrt(dxS*dxS + dyS*dyS);
+            const magS = magnet.strength / (rS * rS * rS);
+
+            // Resultan Vektor B
+            // Arah keluar dari Utara (+), Masuk ke Selatan (-)
+            const Bx = (dxN * magN) - (dxS * magS);
+            const By = (dyN * magN) - (dyS * magS);
+
+            return { x: Bx, y: By, mag: Math.sqrt(Bx*Bx + By*By) };
+        }
+
+        // Loop Utama Animasi
+        function loop() {
+            ctx.clearRect(0, 0, width, height);
+
+            // 1. Gambar Garis Medan (Serbuk Besi)
+            ctx.lineWidth = 1;
+            for (let x = 0; x < width; x += gridSize) {
+                for (let y = 0; y < height; y += gridSize) {
+                    // Hindari menggambar di dalam magnet
+                    if (x > magnet.x - magnet.width/2 && x < magnet.x + magnet.width/2 &&
+                        y > magnet.y - magnet.height/2 && y < magnet.y + magnet.height/2) {
+                        continue;
+                    }
+
+                    const field = calculateField(x, y);
+                    
+                    // Normalisasi untuk penggambaran jarum
+                    const len = 12; // Panjang jarum
+                    let angle = Math.atan2(field.y, field.x);
+                    
+                    // Visualisasi Intensitas: Semakin kuat, semakin opaque (jelas)
+                    let opacity = Math.min(1, field.mag * 500); 
+                    if (opacity < 0.1) opacity = 0.1;
+
+                    ctx.strokeStyle = `rgba(100, 200, 255, ${opacity})`;
+                    
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(angle);
+                    
+                    // Gambar jarum
+                    ctx.beginPath();
+                    ctx.moveTo(-len/2, 0);
+                    ctx.lineTo(len/2, 0);
+                    // Tambahkan panah kecil untuk arah
+                    ctx.lineTo(len/2 - 3, -3);
+                    ctx.moveTo(len/2, 0);
+                    ctx.lineTo(len/2 - 3, 3);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            // 2. Gambar Magnet
+            ctx.save();
+            ctx.translate(magnet.x, magnet.y);
+            
+            // Bayangan
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "rgba(0,0,0,0.5)";
+
+            // Kutub Selatan (Biru)
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillRect(-magnet.width/2, -magnet.height/2, magnet.width/2, magnet.height);
+            
+            // Kutub Utara (Merah)
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(0, -magnet.height/2, magnet.width/2, magnet.height);
+
+            // Label
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('S', -magnet.width/4, 0);
+            ctx.fillText('N', magnet.width/4, 0);
+            
+            // Garis tengah
+            ctx.beginPath();
+            ctx.moveTo(0, -magnet.height/2);
+            ctx.lineTo(0, magnet.height/2);
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.stroke();
+
+            ctx.restore();
+
+            // 3. Update dan Gambar Besi
+            irons.forEach(iron => {
+                iron.update();
+                iron.draw();
+            });
+
+            requestAnimationFrame(loop);
+        }
+
+        // --- Event Listeners untuk Interaksi ---
+
+        // Helper untuk mendapatkan posisi mouse/touch
+        function getPos(e) {
+            if (e.touches) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        }
+
+        function handleStart(e) {
+            const pos = getPos(e);
+            
+            // Cek apakah klik pada Magnet
+            if (pos.x > magnet.x - magnet.width/2 && pos.x < magnet.x + magnet.width/2 &&
+                pos.y > magnet.y - magnet.height/2 && pos.y < magnet.y + magnet.height/2) {
+                magnet.isDragging = true;
+                dragOffset.x = pos.x - magnet.x;
+                dragOffset.y = pos.y - magnet.y;
+                return;
+            }
+
+            // Cek apakah klik pada Bola Besi
+            for (let i = 0; i < irons.length; i++) {
+                const iron = irons[i];
+                const dx = pos.x - iron.x;
+                const dy = pos.y - iron.y;
+                if (Math.sqrt(dx*dx + dy*dy) < iron.radius * 2) {
+                    iron.isDragging = true;
+                    draggedIronIndex = i;
+                    // Stop velocity saat di-drag
+                    iron.vx = 0;
+                    iron.vy = 0;
+                    return;
+                }
+            }
+        }
+
+        function handleMove(e) {
+            const pos = getPos(e);
+
+            if (magnet.isDragging) {
+                magnet.x = pos.x - dragOffset.x;
+                magnet.y = pos.y - dragOffset.y;
+            }
+
+            if (draggedIronIndex !== -1) {
+                irons[draggedIronIndex].x = pos.x;
+                irons[draggedIronIndex].y = pos.y;
+                irons[draggedIronIndex].vx = 0;
+                irons[draggedIronIndex].vy = 0;
+            }
+        }
+
+        function handleEnd() {
+            magnet.isDragging = false;
+            if (draggedIronIndex !== -1) {
+                irons[draggedIronIndex].isDragging = false;
+                draggedIronIndex = -1;
+            }
+        }
+
+        // Mouse Events
+        window.addEventListener('mousedown', handleStart);
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+
+        // Touch Events
+        window.addEventListener('touchstart', handleStart, {passive: false});
+        window.addEventListener('touchmove', function(e) { e.preventDefault(); handleMove(e); }, {passive: false});
+        window.addEventListener('touchend', handleEnd);
+
+        // UI Controls
+        const slider = document.getElementById('strengthSlider');
+        slider.addEventListener('input', (e) => {
+            magnet.strength = parseInt(e.target.value);
+        });
+
+        document.getElementById('addIronBtn').addEventListener('click', () => {
+            // Tambah besi di posisi random aman
+            const randomX = Math.random() * (width - 100) + 50;
+            const randomY = Math.random() * (height - 100) + 50;
+            irons.push(new IronBall(randomX, randomY));
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            irons = [];
+            magnet.x = width / 2;
+            magnet.y = height / 2;
+            magnet.strength = 1500;
+            slider.value = 1500;
+        });
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>
