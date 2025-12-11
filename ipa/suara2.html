@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Gelombang Suara Interaktif</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .wave-container {
+            background: #1a1a2e;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        #waveCanvas {
+            width: 100%;
+            height: 200px;
+            border-radius: 10px;
+            background: #0f0f1e;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-group h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .slider-container {
+            margin-bottom: 15px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+            transition: background 0.3s;
+        }
+
+        input[type="range"]:hover {
+            background: #ccc;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: #764ba2;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .play-controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .play-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .play-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .play-button:active {
+            transform: translateY(0);
+        }
+
+        .play-button.playing {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .presets {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .preset-btn {
+            background: #e9ecef;
+            border: 2px solid transparent;
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .preset-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .info-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .info-item {
+            text-align: center;
+        }
+
+        .info-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #333;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .wave-type-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .wave-type-btn {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .wave-type-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Simulasi Gelombang Suara</h1>
+        <p class="subtitle">Eksplorasi frekuensi dan amplitudo gelombang suara</p>
+
+        <div class="wave-container">
+            <canvas id="waveCanvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3>🎛️ Kontrol Frekuensi</h3>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Frekuensi</span>
+                        <span id="freqValue">440 Hz</span>
+                    </div>
+                    <input type="range" id="frequencySlider" min="20" max="2000" value="440" step="1">
+                </div>
+                <div class="presets">
+                    <button class="preset-btn" data-freq="261.63">Do</button>
+                    <button class="preset-btn" data-freq="293.66">Re</button>
+                    <button class="preset-btn" data-freq="329.63">Mi</button>
+                    <button class="preset-btn" data-freq="349.23">Fa</button>
+                    <button class="preset-btn" data-freq="392.00">Sol</button>
+                    <button class="preset-btn" data-freq="440.00">La</button>
+                    <button class="preset-btn" data-freq="493.88">Si</button>
+                    <button class="preset-btn" data-freq="523.25">Do'</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>🔊 Kontrol Amplitudo</h3>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Volume</span>
+                        <span id="ampValue">50%</span>
+                    </div>
+                    <input type="range" id="amplitudeSlider" min="0" max="100" value="50" step="1">
+                </div>
+                <h3 style="margin-top: 20px;">〰️ Tipe Gelombang</h3>
+                <div class="wave-type-selector">
+                    <button class="wave-type-btn active" data-type="sine">Sinus</button>
+                    <button class="wave-type-btn" data-type="square">Kotak</button>
+                    <button class="wave-type-btn" data-type="sawtooth">Gergaji</button>
+                    <button class="wave-type-btn" data-type="triangle">Segitiga</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="play-controls">
+            <button class="play-button" id="playButton">▶️ Mainkan Suara</button>
+        </div>
+
+        <div class="info-panel">
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Frekuensi</div>
+                    <div class="info-value" id="infoFreq">440 Hz</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Periode</div>
+                    <div class="info-value" id="infoPeriod">2.27 ms</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Panjang Gelombang</div>
+                    <div class="info-value" id="infoWavelength">0.78 m</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Nada</div>
+                    <div class="info-value" id="infoNote">A4</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Audio Context
+        let audioContext = null;
+        let oscillator = null;
+        let gainNode = null;
+        let isPlaying = false;
+
+        // Canvas setup
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+        let animationId = null;
+
+        // Control elements
+        const frequencySlider = document.getElementById('frequencySlider');
+        const amplitudeSlider = document.getElementById('amplitudeSlider');
+        const playButton = document.getElementById('playButton');
+        const freqValue = document.getElementById('freqValue');
+        const ampValue = document.getElementById('ampValue');
+        const presetButtons = document.querySelectorAll('.preset-btn');
+        const waveTypeButtons = document.querySelectorAll('.wave-type-btn');
+
+        // Info elements
+        const infoFreq = document.getElementById('infoFreq');
+        const infoPeriod = document.getElementById('infoPeriod');
+        const infoWavelength = document.getElementById('infoWavelength');
+        const infoNote = document.getElementById('infoNote');
+
+        // Current settings
+        let currentFrequency = 440;
+        let currentAmplitude = 0.5;
+        let currentWaveType = 'sine';
+
+        // Note frequencies
+        const noteFrequencies = {
+            'C4': 261.63, 'C#4': 277.18, 'D4': 293.66, 'D#4': 311.13,
+            'E4': 329.63, 'F4': 349.23, 'F#4': 369.99, 'G4': 392.00,
+            'G#4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'B4': 493.88,
+            'C5': 523.25
+        };
+
+        // Initialize canvas size
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Find closest note
+        function getClosestNote(frequency) {
+            let closestNote = 'A4';
+            let minDiff = Math.abs(frequency - noteFrequencies['A4']);
+            
+            for (const [note, freq] of Object.entries(noteFrequencies)) {
+                const diff = Math.abs(frequency - freq);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestNote = note;
+                }
+            }
+            
+            return closestNote;
+        }
+
+        // Update info panel
+        function updateInfo() {
+            const period = (1 / currentFrequency * 1000).toFixed(2);
+            const wavelength = (343 / currentFrequency).toFixed(2);
+            const note = getClosestNote(currentFrequency);
+            
+            infoFreq.textContent = `${currentFrequency} Hz`;
+            infoPeriod.textContent = `${period} ms`;
+            infoWavelength.textContent = `${wavelength} m`;
+            infoNote.textContent = note;
+        }
+
+        // Draw wave
+        function drawWave() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            
+            // Horizontal lines
+            for (let i = 0; i <= 4; i++) {
+                const y = (canvas.height / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Vertical lines
+            for (let i = 0; i <= 10; i++) {
+                const x = (canvas.width / 10) * i;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Wave
+            ctx.strokeStyle = '#00ff88';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            const amplitude = (canvas.height / 2 - 20) * currentAmplitude;
+            const centerY = canvas.height / 2;
+            const wavelength = canvas.width / (currentFrequency / 100);
+            
+            for (let x = 0; x < canvas.width; x++) {
+                let y;
+                const phase = (x / wavelength) * 2 * Math.PI;
+                
+                switch (currentWaveType) {
+                    case 'sine':
+                        y = centerY + amplitude * Math.sin(phase);
+                        break;
+                    case 'square':
+                        y = centerY + amplitude * (Math.sin(phase) > 0 ? 1 : -1);
+                        break;
+                    case 'sawtooth':
+                        y = centerY + amplitude * (2 * (phase / (2 * Math.PI) - Math.floor(phase / (2 * Math.PI) + 0.5)));
+                        break;
+                    case 'triangle':
+                        y = centerY + amplitude * (2 * Math.abs(2 * (phase / (2 * Math.PI) - Math.floor(phase / (2 * Math.PI) + 0.5))) - 1);
+                        break;
+                }
+                
+                if (x === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            
+            ctx.stroke();
+            
+            // Continue animation
+            animationId = requestAnimationFrame(drawWave);
+        }
+
+        // Start audio
+        function startAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            oscillator = audioContext.createOscillator();
+            gainNode = audioContext.createGain();
+            
+            oscillator.type = currentWaveType;
+            oscillator.frequency.value = currentFrequency;
+            gainNode.gain.value = currentAmplitude * 0.3;
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.start();
+            isPlaying = true;
+            playButton.textContent = '⏸️ Hentikan Suara';
+            playButton.classList.add('playing');
+        }
+
+        // Stop audio
+        function stopAudio() {
+            if (oscillator) {
+                oscillator.stop();
+                oscillator.disconnect();
+                oscillator = null;
+            }
+            if (gainNode) {
+                gainNode.disconnect();
+                gainNode = null;
+            }
+            isPlaying = false;
+            playButton.textContent = '▶️ Mainkan Suara';
+            playButton.classList.remove('playing');
+        }
+
+        // Event listeners
+        frequencySlider.addEventListener('input', (e) => {
+            currentFrequency = parseFloat(e.target.value);
+            freqValue.textContent = `${currentFrequency} Hz`;
+            updateInfo();
+            
+            if (oscillator) {
+                oscillator.frequency.value = currentFrequency;
+            }
+        });
+
+        amplitudeSlider.addEventListener('input', (e) => {
+            currentAmplitude = parseFloat(e.target.value) / 100;
+            ampValue.textContent = `${e.target.value}%`;
+            
+            if (gainNode) {
+                gainNode.gain.value = currentAmplitude * 0.3;
+            }
+        });
+
+        playButton.addEventListener('click', () => {
+            if (isPlaying) {
+                stopAudio();
+            } else {
+                startAudio();
+            }
+        });
+
+        presetButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const freq = parseFloat(btn.dataset.freq);
+                currentFrequency = freq;
+                frequencySlider.value = freq;
+                freqValue.textContent = `${freq} Hz`;
+                updateInfo();
+                
+                if (oscillator) {
+                    oscillator.frequency.value = freq;
+                }
+            });
+        });
+
+        waveTypeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                waveTypeButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentWaveType = btn.dataset.type;
+                
+                if (oscillator) {
+                    oscillator.type = currentWaveType;
+                }
+            });
+        });
+
+        // Initialize
+        updateInfo();
+        drawWave();
+    </script>
+</body>
+</html>
