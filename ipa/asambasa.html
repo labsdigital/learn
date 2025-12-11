@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorium Virtual: Reaksi Asam Basa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f0f9ff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+            backdrop-filter: blur(8px);
+            border-radius: 16px;
+        }
+        .beaker-container {
+            position: relative;
+            height: 300px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+        }
+        canvas {
+            display: block;
+        }
+        /* Custom Range Slider */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #0ea5e9;
+            cursor: pointer;
+            margin-top: -6px; 
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex flex-col items-center">
+
+    <header class="text-center mb-6">
+        <h1 class="text-3xl font-bold text-slate-800">Laboratorium Virtual: Titrasi & pH</h1>
+        <p class="text-slate-600">Campurkan larutan asam dan basa untuk mengamati perubahan pH dan warna indikator.</p>
+    </header>
+
+    <div class="flex flex-col lg:flex-row gap-6 w-full max-w-6xl">
+        
+        <!-- PANEL KONTROL (KIRI) -->
+        <div class="glass-panel p-6 flex-1 flex flex-col gap-6">
+            
+            <!-- Larutan A -->
+            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <h3 class="font-bold text-blue-800 mb-3 flex items-center gap-2">
+                    <span class="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">A</span>
+                    Larutan Pertama
+                </h3>
+                <div class="grid grid-cols-1 gap-3">
+                    <select id="typeA" class="w-full p-2 rounded border border-blue-200 text-sm">
+                        <option value="acid">Asam Kuat (HCl)</option>
+                        <option value="base">Basa Kuat (NaOH)</option>
+                        <option value="water">Air Netral (H2O)</option>
+                    </select>
+                    
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span>Volume</span>
+                            <span id="valVolA" class="font-mono font-bold">50 mL</span>
+                        </div>
+                        <input type="range" id="volA" min="0" max="100" value="50" class="w-full">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span>Konsentrasi (M)</span>
+                            <span id="valMolarA" class="font-mono font-bold">0.1 M</span>
+                        </div>
+                        <input type="range" id="molarA" min="0.01" max="1.0" step="0.01" value="0.1" class="w-full">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Larutan B -->
+            <div class="bg-pink-50 p-4 rounded-xl border border-pink-100">
+                <h3 class="font-bold text-pink-800 mb-3 flex items-center gap-2">
+                    <span class="bg-pink-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">B</span>
+                    Larutan Kedua
+                </h3>
+                <div class="grid grid-cols-1 gap-3">
+                    <select id="typeB" class="w-full p-2 rounded border border-pink-200 text-sm">
+                        <option value="base">Basa Kuat (NaOH)</option>
+                        <option value="acid">Asam Kuat (HCl)</option>
+                        <option value="water">Air Netral (H2O)</option>
+                    </select>
+                    
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span>Volume</span>
+                            <span id="valVolB" class="font-mono font-bold">50 mL</span>
+                        </div>
+                        <input type="range" id="volB" min="0" max="100" value="50" class="w-full">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span>Konsentrasi (M)</span>
+                            <span id="valMolarB" class="font-mono font-bold">0.1 M</span>
+                        </div>
+                        <input type="range" id="molarB" min="0.01" max="1.0" step="0.01" value="0.1" class="w-full">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pilihan Indikator -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Pilih Indikator</label>
+                <select id="indicatorSelect" class="w-full p-2 rounded border border-slate-300 mb-4">
+                    <option value="universal">Indikator Universal (Pelangi)</option>
+                    <option value="pp">Fenolftalein (PP)</option>
+                    <option value="mo">Metil Jingga (MO)</option>
+                    <option value="btb">Bromtimol Biru (BTB)</option>
+                </select>
+
+                <div class="flex gap-2">
+                    <button id="mixBtn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95">
+                        Campurkan
+                    </button>
+                    <button id="resetBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-4 rounded-lg transition">
+                        Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL VISUALISASI (KANAN) -->
+        <div class="glass-panel flex-1 p-6 flex flex-col items-center justify-between min-h-[500px]">
+            
+            <!-- Hasil Perhitungan -->
+            <div class="w-full grid grid-cols-3 gap-4 mb-4 text-center">
+                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+                    <p class="text-xs text-slate-500 uppercase">Volume Total</p>
+                    <p id="resVol" class="text-lg font-bold text-slate-800">0 mL</p>
+                </div>
+                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+                    <p class="text-xs text-slate-500 uppercase">Sifat</p>
+                    <p id="resType" class="text-lg font-bold text-slate-800">-</p>
+                </div>
+                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 ring-2 ring-indigo-100">
+                    <p class="text-xs text-slate-500 uppercase">pH Akhir</p>
+                    <p id="resPH" class="text-2xl font-black text-indigo-600">-</p>
+                </div>
+            </div>
+
+            <!-- Canvas Animasi -->
+            <div class="relative w-full flex-grow flex items-center justify-center bg-white/30 rounded-xl border border-white/50">
+                <!-- Label Gelas -->
+                <div class="absolute top-4 right-4 text-xs text-slate-400">Gelas Kimia 250mL</div>
+                
+                <canvas id="chemCanvas"></canvas>
+            </div>
+
+            <!-- Legenda Warna -->
+            <div class="w-full mt-4">
+                <p class="text-xs text-center text-slate-500 mb-1">Skala Warna Indikator Terpilih:</p>
+                <div id="colorScale" class="h-4 w-full rounded-full bg-gradient-to-r from-red-500 via-green-500 to-purple-500"></div>
+                <div class="flex justify-between text-[10px] text-slate-400 px-1 mt-1">
+                    <span>Asam (0)</span>
+                    <span>Netral (7)</span>
+                    <span>Basa (14)</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        /**
+         * LOGIKA KIMIA & VISUALISASI
+         */
+        
+        // --- 1. Konfigurasi Canvas & Variabel ---
+        const canvas = document.getElementById('chemCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // State Fisika/Kimia
+        let state = {
+            currentVolume: 0,   // mL (untuk animasi ketinggian air)
+            targetVolume: 0,    // mL (volume akhir setelah campur)
+            currentPH: 7.0,     // pH saat ini
+            targetPH: 7.0,      // pH tujuan
+            currentColor: {r:200, g:230, b:255}, // Warna awal (air bening kebiruan)
+            targetColor: {r:200, g:230, b:255},
+            isMixing: false,
+            bubbles: []
+        };
+
+        // --- 2. Helper UI & Inputs ---
+        function getVal(id) { return parseFloat(document.getElementById(id).value); }
+        function setText(id, txt) { document.getElementById(id).textContent = txt; }
+
+        // Update label slider saat digeser
+        ['volA', 'volB'].forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                setText('val' + id.charAt(0).toUpperCase() + id.slice(1), e.target.value + ' mL');
+            });
+        });
+        ['molarA', 'molarB'].forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                setText('val' + id.charAt(0).toUpperCase() + id.slice(1), e.target.value + ' M');
+            });
+        });
+
+        document.getElementById('indicatorSelect').addEventListener('change', updateColorScaleLegend);
+
+        // --- 3. Logika Perhitungan Kimia ---
+        function calculateReaction() {
+            const v1 = getVal('volA');
+            const m1 = getVal('molarA');
+            const type1 = document.getElementById('typeA').value;
+
+            const v2 = getVal('volB');
+            const m2 = getVal('molarB');
+            const type2 = document.getElementById('typeB').value;
+
+            // Hitung mol H+ dan OH-
+            // Mol = Molar * Volume (liter) -> kita pakai mmol (Molar * mL)
+            let mmolH = 0;
+            let mmolOH = 0;
+
+            // Proses Larutan 1
+            if (type1 === 'acid') mmolH += m1 * v1;
+            else if (type1 === 'base') mmolOH += m1 * v1;
+            
+            // Proses Larutan 2
+            if (type2 === 'acid') mmolH += m2 * v2;
+            else if (type2 === 'base') mmolOH += m2 * v2;
+
+            // Volume Total
+            const totalVol = v1 + v2;
+            if (totalVol === 0) return; // Cegah bagi nol
+
+            // Reaksi Netralisasi: H+ + OH- -> H2O
+            // Cari sisa mol
+            let finalPH = 7.0;
+            let resultType = 'Netral';
+
+            if (Math.abs(mmolH - mmolOH) < 0.000001) {
+                // Netral Sempurna
+                finalPH = 7.0;
+                resultType = 'Netral';
+            } else if (mmolH > mmolOH) {
+                // Sisa Asam
+                const sisaH = mmolH - mmolOH;
+                const konsentrasiH = sisaH / totalVol; // Molaritas akhir
+                finalPH = -Math.log10(konsentrasiH);
+                resultType = 'Asam';
+            } else {
+                // Sisa Basa
+                const sisaOH = mmolOH - mmolH;
+                const konsentrasiOH = sisaOH / totalVol;
+                const pOH = -Math.log10(konsentrasiOH);
+                finalPH = 14 - pOH;
+                resultType = 'Basa';
+            }
+
+            // Clamp pH range 0-14 (untuk kasus ekstrem)
+            finalPH = Math.max(0, Math.min(14, finalPH));
+
+            // Update UI Teks
+            setText('resVol', totalVol.toFixed(1) + ' mL');
+            setText('resType', resultType);
+            setText('resPH', finalPH.toFixed(2));
+
+            // Set Target Animasi
+            state.targetVolume = totalVol;
+            state.targetPH = finalPH;
+            
+            // Tentukan Warna Target berdasarkan Indikator
+            const indicator = document.getElementById('indicatorSelect').value;
+            state.targetColor = getIndicatorColor(finalPH, indicator);
+            
+            state.isMixing = true;
+            generateBubbles();
+        }
+
+        // --- 4. Sistem Warna Indikator ---
+        function getIndicatorColor(pH, type) {
+            // Helper untuk konversi HEX ke RGB object
+            const hexToRgb = (hex) => {
+                const bigint = parseInt(hex.substring(1), 16);
+                return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+            }
+
+            // Logika Warna Berdasarkan Tipe Indikator
+            if (type === 'universal') {
+                // Spektrum Pelangi Sederhana
+                if (pH < 3) return hexToRgb('#ef4444'); // Merah
+                if (pH < 5) return hexToRgb('#f97316'); // Oranye
+                if (pH < 6.5) return hexToRgb('#eab308'); // Kuning
+                if (pH < 8.5) return hexToRgb('#22c55e'); // Hijau
+                if (pH < 10) return hexToRgb('#3b82f6'); // Biru
+                return hexToRgb('#a855f7'); // Ungu
+            } 
+            else if (type === 'pp') {
+                // Fenolftalein: Bening (Asam/Netral) -> Merah Muda/Ungu (Basa > 8.3)
+                if (pH < 8.3) return { r: 230, g: 240, b: 255 }; // Hampir bening
+                // Gradasi pink ke ungu pekat
+                const intensity = Math.min(1, (pH - 8.3) / 1.7); 
+                return { 
+                    r: 255, 
+                    g: 240 - (200 * intensity), 
+                    b: 255 - (50 * intensity) 
+                };
+            }
+            else if (type === 'mo') {
+                // Metil Jingga: Merah (<3.1) -> Kuning (>4.4)
+                if (pH < 3.1) return hexToRgb('#ef4444'); // Merah
+                if (pH > 4.4) return hexToRgb('#fbbf24'); // Kuning
+                return hexToRgb('#f97316'); // Transisi (Oranye)
+            }
+            else if (type === 'btb') {
+                // Bromtimol Biru: Kuning (Asam) -> Biru (Basa)
+                if (pH < 6.0) return hexToRgb('#eab308'); // Kuning
+                if (pH > 7.6) return hexToRgb('#3b82f6'); // Biru
+                return hexToRgb('#22c55e'); // Hijau (Netral)
+            }
+            return { r: 200, g: 230, b: 255 }; // Default Air
+        }
+
+        function updateColorScaleLegend() {
+            const type = document.getElementById('indicatorSelect').value;
+            const bar = document.getElementById('colorScale');
+            
+            if (type === 'universal') bar.className = "h-4 w-full rounded-full bg-gradient-to-r from-red-500 via-green-500 to-purple-500";
+            else if (type === 'pp') bar.className = "h-4 w-full rounded-full bg-gradient-to-r from-white via-white to-fuchsia-600";
+            else if (type === 'mo') bar.className = "h-4 w-full rounded-full bg-gradient-to-r from-red-500 via-orange-500 to-yellow-400";
+            else if (type === 'btb') bar.className = "h-4 w-full rounded-full bg-gradient-to-r from-yellow-400 via-green-500 to-blue-500";
+        }
+
+        // --- 5. Animasi Canvas ---
+        function resize() {
+            const parent = canvas.parentElement;
+            canvas.width = parent.clientWidth;
+            canvas.height = parent.clientHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function generateBubbles() {
+            for(let i=0; i<20; i++) {
+                state.bubbles.push({
+                    x: Math.random() * 100 - 50, // relative center
+                    y: Math.random() * 20, // relative bottom
+                    r: Math.random() * 3 + 1,
+                    speed: Math.random() * 2 + 1
+                });
+            }
+        }
+
+        function lerp(start, end, t) {
+            return start * (1 - t) + end * t;
+        }
+
+        function drawBeaker() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h - 20; // Bottom margin
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Parameter Gelas
+            const beakerWidth = 140;
+            const beakerHeight = 220;
+            const liquidMaxHeight = 200; // max pixel height for 200mL (example)
+
+            // Hitung tinggi air berdasarkan volume (Max 200mL visual cap)
+            const volumeRatio = Math.min(state.currentVolume, 200) / 200;
+            const liquidPixelHeight = volumeRatio * liquidMaxHeight;
+
+            // Interpolasi Warna
+            const dr = state.targetColor.r - state.currentColor.r;
+            const dg = state.targetColor.g - state.currentColor.g;
+            const db = state.targetColor.b - state.currentColor.b;
+
+            // Kecepatan transisi warna & volume
+            if (state.isMixing) {
+                state.currentColor.r += dr * 0.05;
+                state.currentColor.g += dg * 0.05;
+                state.currentColor.b += db * 0.05;
+                
+                state.currentVolume = lerp(state.currentVolume, state.targetVolume, 0.05);
+                
+                // Stop mixing flag if close enough
+                if (Math.abs(state.currentVolume - state.targetVolume) < 0.1 && Math.abs(dr) < 1) {
+                    state.isMixing = false;
+                }
+            }
+
+            const fluidColor = `rgb(${Math.round(state.currentColor.r)}, ${Math.round(state.currentColor.g)}, ${Math.round(state.currentColor.b)})`;
+
+            // 1. Gambar Cairan
+            if (state.currentVolume > 0.5) {
+                ctx.save();
+                ctx.fillStyle = fluidColor;
+                
+                // Bentuk cairan mengikuti bentuk gelas
+                ctx.beginPath();
+                ctx.moveTo(cx - beakerWidth/2 + 5, cy - liquidPixelHeight); // Top Left surface
+                ctx.lineTo(cx + beakerWidth/2 - 5, cy - liquidPixelHeight); // Top Right surface
+                ctx.lineTo(cx + beakerWidth/2 - 10, cy - 10); // Bottom Right corner
+                ctx.quadraticCurveTo(cx + beakerWidth/2 - 10, cy, cx + beakerWidth/2 - 25, cy); // Rounded Bottom R
+                ctx.lineTo(cx - beakerWidth/2 + 25, cy); // Bottom line
+                ctx.quadraticCurveTo(cx - beakerWidth/2 + 10, cy, cx - beakerWidth/2 + 10, cy - 10); // Rounded Bottom L
+                ctx.lineTo(cx - beakerWidth/2 + 5, cy - liquidPixelHeight); // Back to top
+                ctx.fill();
+
+                // Permukaan atas cairan (Meniskus)
+                ctx.fillStyle = `rgba(255,255,255,0.3)`;
+                ctx.beginPath();
+                ctx.ellipse(cx, cy - liquidPixelHeight, beakerWidth/2 - 5, 5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Bubbles Effect
+                if (state.isMixing) {
+                    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                    state.bubbles.forEach((b, i) => {
+                        b.y += b.speed;
+                        // Draw bubble relative to fluid bottom
+                        let drawY = cy - b.y;
+                        if (drawY < cy - liquidPixelHeight) {
+                            // Reset bubble if it hits surface
+                            b.y = 0;
+                            b.x = Math.random() * (beakerWidth - 20) - (beakerWidth/2 - 10);
+                        }
+                        
+                        ctx.beginPath();
+                        ctx.arc(cx + b.x, drawY, b.r, 0, Math.PI*2);
+                        ctx.fill();
+                    });
+                }
+
+                ctx.restore();
+            }
+
+            // 2. Gambar Gelas (Outline)
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#94a3b8'; // Slate-400
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            // Bibir Kiri
+            ctx.moveTo(cx - beakerWidth/2, cy - beakerHeight); 
+            // Dinding Kiri
+            ctx.lineTo(cx - beakerWidth/2 + 10, cy - 10); 
+            // Sudut Bawah Kiri (Curve)
+            ctx.quadraticCurveTo(cx - beakerWidth/2 + 10, cy, cx - beakerWidth/2 + 25, cy);
+            // Alas Bawah
+            ctx.lineTo(cx + beakerWidth/2 - 25, cy);
+            // Sudut Bawah Kanan (Curve)
+            ctx.quadraticCurveTo(cx + beakerWidth/2 - 10, cy, cx + beakerWidth/2 - 10, cy - 10);
+            // Dinding Kanan
+            ctx.lineTo(cx + beakerWidth/2, cy - beakerHeight);
+            ctx.stroke();
+
+            // Bibir Gelas (Ellipse)
+            ctx.beginPath();
+            ctx.ellipse(cx, cy - beakerHeight, beakerWidth/2, 6, 0, 0, Math.PI * 2);
+            ctx.strokeStyle = '#cbd5e1'; // Slate-300 lighter for rim
+            ctx.stroke();
+
+            // Graduasi / Garis Ukur
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+            ctx.font = "10px Arial";
+            ctx.fillStyle = "rgba(0,0,0,0.4)";
+            ctx.textAlign = "right";
+
+            for(let v = 50; v <= 200; v += 50) {
+                const hRatio = v / 200;
+                const yPos = cy - (hRatio * liquidMaxHeight);
+                ctx.beginPath();
+                ctx.moveTo(cx - beakerWidth/2 + 10, yPos);
+                ctx.lineTo(cx - beakerWidth/2 + 25, yPos);
+                ctx.stroke();
+                ctx.fillText(v + "", cx - beakerWidth/2 + 8, yPos + 3);
+            }
+
+            requestAnimationFrame(drawBeaker);
+        }
+
+        // --- 6. Event Handlers ---
+        document.getElementById('mixBtn').addEventListener('click', calculateReaction);
+        
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            state.targetVolume = 0;
+            state.targetPH = 7.0;
+            state.targetColor = {r:200, g:230, b:255}; // Kembali bening
+            state.isMixing = true;
+            
+            // Reset UI Text
+            setText('resVol', '0 mL');
+            setText('resType', '-');
+            setText('resPH', '-');
+        });
+
+        // Start Loop
+        updateColorScaleLegend();
+        drawBeaker();
+
+    </script>
+</body>
+</html>
