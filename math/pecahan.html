@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorium Perbandingan Pecahan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
+        
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background-color: #f0f9ff;
+            color: #334155;
+        }
+
+        /* Custom Input Number Styling */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+
+        .fraction-input {
+            transition: all 0.2s;
+        }
+        .fraction-input:focus {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.3);
+        }
+
+        /* Animation for result symbol */
+        .pop-in {
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* SVG Path Transitions */
+        path, rect {
+            transition: fill 0.3s ease, d 0.3s ease;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white p-4 shadow-lg text-center relative z-10">
+        <h1 class="text-3xl font-bold flex justify-center items-center gap-2">
+            🍕 Laboratorium Pecahan
+        </h1>
+        <p class="text-indigo-200 text-sm">Visualisasi dan Perbandingan Nilai Pecahan</p>
+    </header>
+
+    <main class="flex-grow max-w-5xl mx-auto w-full p-4 md:p-8 flex flex-col gap-6">
+
+        <!-- Controls: Shape Toggle -->
+        <div class="flex justify-center">
+            <div class="bg-white p-1 rounded-xl shadow-sm border border-slate-200 inline-flex">
+                <button onclick="setShape('circle')" id="btn-circle" class="px-4 py-2 rounded-lg text-sm font-bold bg-indigo-100 text-indigo-700 transition-colors">
+                    ⭕ Diagram Lingkaran
+                </button>
+                <button onclick="setShape('rect')" id="btn-rect" class="px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors">
+                    🍫 Diagram Batang
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Comparison Area -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+            
+            <!-- FRACTION A (Left) -->
+            <div class="md:col-span-5 bg-white p-6 rounded-3xl shadow-lg border-t-8 border-blue-500 flex flex-col items-center">
+                <h2 class="text-xl font-bold text-blue-600 mb-4">Pecahan A</h2>
+                
+                <!-- Visualization Container -->
+                <div id="visual-container-a" class="w-48 h-48 mb-6 relative flex items-center justify-center">
+                    <!-- Content injected by JS -->
+                </div>
+
+                <!-- Input Controls -->
+                <div class="flex flex-col items-center gap-2 w-full max-w-[150px]">
+                    <!-- Numerator -->
+                    <div class="flex items-center w-full">
+                        <button onclick="adjustValue('num-a', -1)" class="w-8 h-8 bg-slate-100 rounded-l hover:bg-slate-200 font-bold">-</button>
+                        <input type="number" id="num-a" value="1" min="0" max="12" class="fraction-input w-full text-center font-bold text-2xl border-y border-slate-200 py-2 outline-none text-blue-600" onchange="updateSim()">
+                        <button onclick="adjustValue('num-a', 1)" class="w-8 h-8 bg-slate-100 rounded-r hover:bg-slate-200 font-bold">+</button>
+                    </div>
+                    
+                    <!-- Separator Line -->
+                    <div class="w-full h-1 bg-slate-800 rounded-full"></div>
+
+                    <!-- Denominator -->
+                    <div class="flex items-center w-full">
+                        <button onclick="adjustValue('den-a', -1)" class="w-8 h-8 bg-slate-100 rounded-l hover:bg-slate-200 font-bold">-</button>
+                        <input type="number" id="den-a" value="2" min="1" max="12" class="fraction-input w-full text-center font-bold text-2xl border-y border-slate-200 py-2 outline-none text-slate-600" onchange="updateSim()">
+                        <button onclick="adjustValue('den-a', 1)" class="w-8 h-8 bg-slate-100 rounded-r hover:bg-slate-200 font-bold">+</button>
+                    </div>
+                </div>
+                
+                <p class="mt-4 text-sm text-slate-400 font-bold">Pembilang / Penyebut</p>
+            </div>
+
+            <!-- COMPARISON OPERATOR (Middle) -->
+            <div class="md:col-span-2 flex flex-col items-center justify-center py-4">
+                <div class="bg-indigo-900 text-white w-20 h-20 rounded-full flex items-center justify-center shadow-xl border-4 border-indigo-200">
+                    <span id="operator-symbol" class="text-5xl font-bold pop-in">=</span>
+                </div>
+                <div class="mt-4 bg-white px-4 py-2 rounded-lg shadow-sm text-center border border-indigo-100">
+                    <p class="text-xs text-slate-400 uppercase tracking-wider mb-1">Nilai Desimal</p>
+                    <div class="flex gap-4 font-mono font-bold text-indigo-700">
+                        <span id="decimal-a">0.50</span>
+                        <span id="decimal-op">=</span>
+                        <span id="decimal-b">0.50</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FRACTION B (Right) -->
+            <div class="md:col-span-5 bg-white p-6 rounded-3xl shadow-lg border-t-8 border-pink-500 flex flex-col items-center">
+                <h2 class="text-xl font-bold text-pink-600 mb-4">Pecahan B</h2>
+                
+                <!-- Visualization Container -->
+                <div id="visual-container-b" class="w-48 h-48 mb-6 relative flex items-center justify-center">
+                    <!-- Content injected by JS -->
+                </div>
+
+                <!-- Input Controls -->
+                <div class="flex flex-col items-center gap-2 w-full max-w-[150px]">
+                    <!-- Numerator -->
+                    <div class="flex items-center w-full">
+                        <button onclick="adjustValue('num-b', -1)" class="w-8 h-8 bg-slate-100 rounded-l hover:bg-slate-200 font-bold">-</button>
+                        <input type="number" id="num-b" value="1" min="0" max="12" class="fraction-input w-full text-center font-bold text-2xl border-y border-slate-200 py-2 outline-none text-pink-600" onchange="updateSim()">
+                        <button onclick="adjustValue('num-b', 1)" class="w-8 h-8 bg-slate-100 rounded-r hover:bg-slate-200 font-bold">+</button>
+                    </div>
+                    
+                    <!-- Separator Line -->
+                    <div class="w-full h-1 bg-slate-800 rounded-full"></div>
+
+                    <!-- Denominator -->
+                    <div class="flex items-center w-full">
+                        <button onclick="adjustValue('den-b', -1)" class="w-8 h-8 bg-slate-100 rounded-l hover:bg-slate-200 font-bold">-</button>
+                        <input type="number" id="den-b" value="4" min="1" max="12" class="fraction-input w-full text-center font-bold text-2xl border-y border-slate-200 py-2 outline-none text-slate-600" onchange="updateSim()">
+                        <button onclick="adjustValue('den-b', 1)" class="w-8 h-8 bg-slate-100 rounded-r hover:bg-slate-200 font-bold">+</button>
+                    </div>
+                </div>
+
+                <p class="mt-4 text-sm text-slate-400 font-bold">Pembilang / Penyebut</p>
+            </div>
+        </div>
+
+        <!-- Explanation Section -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center text-yellow-800">
+            <h3 class="font-bold text-lg mb-2">💡 Tips Belajar</h3>
+            <p id="explanation-text">
+                Pecahan A (1/2) lebih besar daripada Pecahan B (1/4). Bayangkan potongan pizza: setengah loyang lebih banyak daripada seperempat loyang.
+            </p>
+        </div>
+
+    </main>
+
+    <script>
+        // --- State ---
+        let currentShape = 'circle'; // 'circle' or 'rect'
+
+        // --- Config ---
+        const colors = {
+            a: { fill: '#3b82f6', empty: '#eff6ff', stroke: '#2563eb' }, // Blue
+            b: { fill: '#ec4899', empty: '#fdf2f8', stroke: '#db2777' }  // Pink
+        };
+
+        // --- Main Logic ---
+
+        function adjustValue(id, delta) {
+            const input = document.getElementById(id);
+            let val = parseInt(input.value) + delta;
+            
+            // Logic constraints
+            const isDenom = id.includes('den');
+            const isNum = id.includes('num');
+            const counterpartId = isDenom ? id.replace('den', 'num') : id.replace('num', 'den');
+            const counterpartVal = parseInt(document.getElementById(counterpartId).value);
+
+            // Min/Max Rules
+            if (isDenom) {
+                if (val < 1) val = 1;
+                if (val > 12) val = 12; // Limit max slices for visibility
+                // Ensure num doesn't exceed new den
+                if (counterpartVal > val) {
+                    document.getElementById(counterpartId).value = val;
+                }
+            } else {
+                if (val < 0) val = 0;
+                // Don't allow num > den (Proper fractions only for this sim)
+                if (val > counterpartVal) val = counterpartVal;
+            }
+            
+            input.value = val;
+            updateSim();
+        }
+
+        function setShape(shape) {
+            currentShape = shape;
+            
+            // Update buttons styling
+            const btnCircle = document.getElementById('btn-circle');
+            const btnRect = document.getElementById('btn-rect');
+            
+            if (shape === 'circle') {
+                btnCircle.className = "px-4 py-2 rounded-lg text-sm font-bold bg-indigo-100 text-indigo-700 transition-colors shadow-inner";
+                btnRect.className = "px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors";
+            } else {
+                btnRect.className = "px-4 py-2 rounded-lg text-sm font-bold bg-indigo-100 text-indigo-700 transition-colors shadow-inner";
+                btnCircle.className = "px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors";
+            }
+            
+            updateSim();
+        }
+
+        function updateSim() {
+            // 1. Get Values
+            const nA = parseInt(document.getElementById('num-a').value);
+            const dA = parseInt(document.getElementById('den-a').value);
+            const nB = parseInt(document.getElementById('num-b').value);
+            const dB = parseInt(document.getElementById('den-b').value);
+
+            // 2. Render Visualization
+            renderVisual('visual-container-a', nA, dA, colors.a);
+            renderVisual('visual-container-b', nB, dB, colors.b);
+
+            // 3. Update Comparison Logic
+            const valA = nA / dA;
+            const valB = nB / dB;
+            
+            const operatorEl = document.getElementById('operator-symbol');
+            const decimalOpEl = document.getElementById('decimal-op');
+            let op = '=';
+            let expText = "";
+
+            // Reset animation
+            operatorEl.classList.remove('pop-in');
+            void operatorEl.offsetWidth; // trigger reflow
+            operatorEl.classList.add('pop-in');
+
+            if (valA > valB) {
+                op = '>';
+                expText = `Pecahan A (${nA}/${dA}) <strong>lebih besar</strong> daripada Pecahan B (${nB}/${dB}).`;
+            } else if (valA < valB) {
+                op = '<';
+                expText = `Pecahan A (${nA}/${dA}) <strong>lebih kecil</strong> daripada Pecahan B (${nB}/${dB}).`;
+            } else {
+                op = '=';
+                expText = `Pecahan A (${nA}/${dA}) <strong>sama nilainya</strong> dengan Pecahan B (${nB}/${dB}).`;
+            }
+
+            operatorEl.textContent = op;
+            decimalOpEl.textContent = op;
+
+            // 4. Update Decimal Displays
+            document.getElementById('decimal-a').textContent = valA.toFixed(2);
+            document.getElementById('decimal-b').textContent = valB.toFixed(2);
+            document.getElementById('explanation-text').innerHTML = expText;
+        }
+
+        function renderVisual(containerId, numerator, denominator, colorSet) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = ''; // Clear prev
+
+            if (currentShape === 'circle') {
+                const svg = createPieChart(numerator, denominator, colorSet);
+                container.appendChild(svg);
+            } else {
+                const svg = createBarChart(numerator, denominator, colorSet);
+                container.appendChild(svg);
+            }
+        }
+
+        // --- SVG Generators ---
+
+        function createPieChart(n, total, colors) {
+            const size = 180;
+            const center = size / 2;
+            const radius = 80;
+            
+            const ns = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(ns, "svg");
+            svg.setAttribute("width", "100%");
+            svg.setAttribute("height", "100%");
+            svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
+            
+            // Draw Slices
+            for (let i = 0; i < total; i++) {
+                const startAngle = (i * 360) / total;
+                const endAngle = ((i + 1) * 360) / total;
+                
+                // Convert angle to coordinates
+                // -90 degrees to start at 12 o'clock
+                const x1 = center + radius * Math.cos(Math.PI * (startAngle - 90) / 180);
+                const y1 = center + radius * Math.sin(Math.PI * (startAngle - 90) / 180);
+                const x2 = center + radius * Math.cos(Math.PI * (endAngle - 90) / 180);
+                const y2 = center + radius * Math.sin(Math.PI * (endAngle - 90) / 180);
+
+                const pathData = total === 1 
+                    ? `M ${center}, ${center - radius} A ${radius},${radius} 0 1,1 ${center},${center + radius} A ${radius},${radius} 0 1,1 ${center},${center - radius}` // Full circle special case
+                    : `M ${center},${center} L ${x1},${y1} A ${radius},${radius} 0 0,1 ${x2},${y2} Z`;
+
+                const path = document.createElementNS(ns, "path");
+                path.setAttribute("d", pathData);
+                path.setAttribute("fill", i < n ? colors.fill : colors.empty);
+                path.setAttribute("stroke", "white");
+                path.setAttribute("stroke-width", "2");
+                svg.appendChild(path);
+            }
+            
+            // Outer stroke circle for neatness
+            const circle = document.createElementNS(ns, "circle");
+            circle.setAttribute("cx", center);
+            circle.setAttribute("cy", center);
+            circle.setAttribute("r", radius);
+            circle.setAttribute("fill", "none");
+            circle.setAttribute("stroke", colors.stroke);
+            circle.setAttribute("stroke-width", "3");
+            svg.appendChild(circle);
+
+            return svg;
+        }
+
+        function createBarChart(n, total, colors) {
+            const w = 180;
+            const h = 180;
+            const barW = 140;
+            const barH = 160;
+            const x = (w - barW) / 2;
+            const y = (h - barH) / 2;
+
+            const ns = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(ns, "svg");
+            svg.setAttribute("width", "100%");
+            svg.setAttribute("height", "100%");
+            svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+
+            const sliceHeight = barH / total;
+
+            // Border Rect
+            const border = document.createElementNS(ns, "rect");
+            border.setAttribute("x", x);
+            border.setAttribute("y", y);
+            border.setAttribute("width", barW);
+            border.setAttribute("height", barH);
+            border.setAttribute("rx", 8);
+            border.setAttribute("fill", "white");
+            border.setAttribute("stroke", colors.stroke);
+            border.setAttribute("stroke-width", "3");
+            svg.appendChild(border);
+
+            // Draw Slices (Bottom up feels more like "filling up", but Top down matches reading order. Let's do Top Down)
+            for (let i = 0; i < total; i++) {
+                const rect = document.createElementNS(ns, "rect");
+                rect.setAttribute("x", x);
+                rect.setAttribute("y", y + (i * sliceHeight));
+                rect.setAttribute("width", barW);
+                rect.setAttribute("height", sliceHeight);
+                
+                // Handle rounded corners for top and bottom only
+                if (i === 0 && total > 1) {
+                     // Top slice logic if needed, usually simple rect is fine if clipped by parent, 
+                     // but SVG clipping is verbose. Let's just fit them inside.
+                     // Simple visual:
+                }
+
+                rect.setAttribute("fill", i < n ? colors.fill : colors.empty);
+                rect.setAttribute("stroke", "white");
+                rect.setAttribute("stroke-width", "2");
+                svg.appendChild(rect);
+            }
+            
+            // Re-draw border on top to hide messy stroke edges
+            const borderTop = border.cloneNode();
+            borderTop.setAttribute("fill", "none");
+            svg.appendChild(borderTop);
+
+            return svg;
+        }
+
+        // Init
+        updateSim();
+
+    </script>
+</body>
+</html>
