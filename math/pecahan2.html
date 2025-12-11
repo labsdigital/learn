@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Interaktif Pecahan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .visualization-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .fraction-panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+
+        .fraction-panel:hover {
+            transform: translateY(-5px);
+        }
+
+        .fraction-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .fraction-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .fraction-display {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .fraction-display .numerator {
+            color: #667eea;
+        }
+
+        .fraction-display .denominator {
+            color: #764ba2;
+        }
+
+        .fraction-line {
+            width: 60px;
+            height: 4px;
+            background: #333;
+            margin: 5px auto;
+        }
+
+        .diagram-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin: 20px 0;
+            min-height: 200px;
+        }
+
+        .diagram {
+            position: relative;
+        }
+
+        .shape-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .shape-btn {
+            padding: 8px 16px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .shape-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .controls {
+            margin-top: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .compare-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .compare-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            margin-bottom: 20px;
+        }
+
+        .compare-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .result {
+            font-size: 1.5em;
+            font-weight: bold;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            opacity: 0;
+            transition: all 0.5s;
+        }
+
+        .result.show {
+            opacity: 1;
+        }
+
+        .result.greater {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .result.less {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .result.equal {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+
+        .info-panel {
+            background: #e9ecef;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .info-item {
+            text-align: center;
+            padding: 10px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .info-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #333;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .visualization-container {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .diagram-container {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+
+        .fraction-1 {
+            border-left: 5px solid #667eea;
+        }
+
+        .fraction-2 {
+            border-left: 5px solid #764ba2;
+        }
+
+        .fraction-1 .fraction-title {
+            color: #667eea;
+        }
+
+        .fraction-2 .fraction-title {
+            color: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔢 Simulasi Interaktif Pecahan</h1>
+        <p class="subtitle">Visualisasikan dan bandingkan pecahan dengan diagram</p>
+
+        <div class="visualization-container">
+            <!-- Pecahan 1 -->
+            <div class="fraction-panel fraction-1">
+                <div class="fraction-header">
+                    <div class="fraction-title">Pecahan 1</div>
+                    <div class="fraction-display">
+                        <span class="numerator" id="num1">1</span>
+                        <div class="fraction-line"></div>
+                        <span class="denominator" id="den1">2</span>
+                    </div>
+                </div>
+
+                <div class="shape-selector">
+                    <button class="shape-btn active" data-fraction="1" data-shape="circle">Lingkaran</button>
+                    <button class="shape-btn" data-fraction="1" data-shape="rectangle">Persegi</button>
+                </div>
+
+                <div class="diagram-container">
+                    <div class="diagram">
+                        <canvas id="canvas1" width="150" height="150"></canvas>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Pembilang</span>
+                            <span id="num1Value">1</span>
+                        </div>
+                        <input type="range" id="numerator1" min="1" max="12" value="1">
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Penyebut</span>
+                            <span id="den1Value">2</span>
+                        </div>
+                        <input type="range" id="denominator1" min="1" max="12" value="2">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pecahan 2 -->
+            <div class="fraction-panel fraction-2">
+                <div class="fraction-header">
+                    <div class="fraction-title">Pecahan 2</div>
+                    <div class="fraction-display">
+                        <span class="numerator" id="num2">1</span>
+                        <div class="fraction-line"></div>
+                        <span class="denominator" id="den2">3</span>
+                    </div>
+                </div>
+
+                <div class="shape-selector">
+                    <button class="shape-btn active" data-fraction="2" data-shape="circle">Lingkaran</button>
+                    <button class="shape-btn" data-fraction="2" data-shape="rectangle">Persegi</button>
+                </div>
+
+                <div class="diagram-container">
+                    <div class="diagram">
+                        <canvas id="canvas2" width="150" height="150"></canvas>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Pembilang</span>
+                            <span id="num2Value">1</span>
+                        </div>
+                        <input type="range" id="numerator2" min="1" max="12" value="1">
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Penyebut</span>
+                            <span id="den2Value">3</span>
+                        </div>
+                        <input type="range" id="denominator2" min="1" max="12" value="3">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="compare-section">
+            <button class="compare-btn" id="compareBtn">Bandingkan Pecahan</button>
+            <div class="result" id="result"></div>
+        </div>
+
+        <div class="info-panel">
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Nilai Pecahan 1</div>
+                    <div class="info-value" id="decimal1">0.5</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Nilai Pecahan 2</div>
+                    <div class="info-value" id="decimal2">0.333</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Selisih</div>
+                    <div class="info-value" id="difference">0.167</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">KPK Penyebut</div>
+                    <div class="info-value" id="kpk">6</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        const fractions = {
+            1: { numerator: 1, denominator: 2, shape: 'circle' },
+            2: { numerator: 1, denominator: 3, shape: 'circle' }
+        };
+
+        // Canvas contexts
+        const canvas1 = document.getElementById('canvas1');
+        const ctx1 = canvas1.getContext('2d');
+        const canvas2 = document.getElementById('canvas2');
+        const ctx2 = canvas2.getContext('2d');
+
+        // Control elements
+        const numerator1 = document.getElementById('numerator1');
+        const denominator1 = document.getElementById('denominator1');
+        const numerator2 = document.getElementById('numerator2');
+        const denominator2 = document.getElementById('denominator2');
+        const compareBtn = document.getElementById('compareBtn');
+        const result = document.getElementById('result');
+
+        // Display elements
+        const num1 = document.getElementById('num1');
+        const den1 = document.getElementById('den1');
+        const num2 = document.getElementById('num2');
+        const den2 = document.getElementById('den2');
+        const num1Value = document.getElementById('num1Value');
+        const den1Value = document.getElementById('den1Value');
+        const num2Value = document.getElementById('num2Value');
+        const den2Value = document.getElementById('den2Value');
+
+        // Info elements
+        const decimal1 = document.getElementById('decimal1');
+        const decimal2 = document.getElementById('decimal2');
+        const difference = document.getElementById('difference');
+        const kpk = document.getElementById('kpk');
+
+        // Colors
+        const colors = {
+            1: '#667eea',
+            2: '#764ba2'
+        };
+
+        // Draw circle fraction
+        function drawCircleFraction(ctx, fraction, color) {
+            const centerX = 75;
+            const centerY = 75;
+            const radius = 60;
+            
+            ctx.clearRect(0, 0, 150, 150);
+            
+            // Draw circle segments
+            const anglePerSegment = (2 * Math.PI) / fraction.denominator;
+            
+            for (let i = 0; i < fraction.denominator; i++) {
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, i * anglePerSegment, (i + 1) * anglePerSegment);
+                ctx.closePath();
+                
+                if (i < fraction.numerator) {
+                    ctx.fillStyle = color;
+                } else {
+                    ctx.fillStyle = '#e9ecef';
+                }
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            
+            // Draw center circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = '#333';
+            ctx.fill();
+        }
+
+        // Draw rectangle fraction
+        function drawRectangleFraction(ctx, fraction, color) {
+            const width = 120;
+            const height = 120;
+            const x = 15;
+            const y = 15;
+            
+            ctx.clearRect(0, 0, 150, 150);
+            
+            const segmentWidth = width / fraction.denominator;
+            
+            for (let i = 0; i < fraction.denominator; i++) {
+                if (i < fraction.numerator) {
+                    ctx.fillStyle = color;
+                } else {
+                    ctx.fillStyle = '#e9ecef';
+                }
+                ctx.fillRect(x + i * segmentWidth, y, segmentWidth, height);
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x + i * segmentWidth, y, segmentWidth, height);
+            }
+        }
+
+        // Update fraction display
+        function updateFraction(fractionNum) {
+            const f = fractions[fractionNum];
+            
+            if (fractionNum === 1) {
+                num1.textContent = f.numerator;
+                den1.textContent = f.denominator;
+                num1Value.textContent = f.numerator;
+                den1Value.textContent = f.denominator;
+                
+                if (f.shape === 'circle') {
+                    drawCircleFraction(ctx1, f, colors[1]);
+                } else {
+                    drawRectangleFraction(ctx1, f, colors[1]);
+                }
+            } else {
+                num2.textContent = f.numerator;
+                den2.textContent = f.denominator;
+                num2Value.textContent = f.numerator;
+                den2Value.textContent = f.denominator;
+                
+                if (f.shape === 'circle') {
+                    drawCircleFraction(ctx2, f, colors[2]);
+                } else {
+                    drawRectangleFraction(ctx2, f, colors[2]);
+                }
+            }
+            
+            updateInfo();
+        }
+
+        // Update info panel
+        function updateInfo() {
+            const f1 = fractions[1];
+            const f2 = fractions[2];
+            
+            const dec1 = f1.numerator / f1.denominator;
+            const dec2 = f2.numerator / f2.denominator;
+            const diff = Math.abs(dec1 - dec2);
+            
+            decimal1.textContent = dec1.toFixed(3);
+            decimal2.textContent = dec2.toFixed(3);
+            difference.textContent = diff.toFixed(3);
+            
+            // Calculate KPK
+            const kpkValue = calculateKPK(f1.denominator, f2.denominator);
+            kpk.textContent = kpkValue;
+        }
+
+        // Calculate KPK (Least Common Multiple)
+        function calculateKPK(a, b) {
+            const gcd = (x, y) => {
+                while (y) {
+                    const temp = y;
+                    y = x % y;
+                    x = temp;
+                }
+                return x;
+            };
+            
+            return (a * b) / gcd(a, b);
+        }
+
+        // Compare fractions
+        function compareFractions() {
+            const f1 = fractions[1];
+            const f2 = fractions[2];
+            
+            const value1 = f1.numerator / f1.denominator;
+            const value2 = f2.numerator / f2.denominator;
+            
+            result.classList.remove('show', 'greater', 'less', 'equal');
+            
+            setTimeout(() => {
+                if (value1 > value2) {
+                    result.textContent = `Pecahan 1 (${f1.numerator}/${f1.denominator}) lebih besar dari Pecahan 2 (${f2.numerator}/${f2.denominator})`;
+                    result.classList.add('greater');
+                } else if (value1 < value2) {
+                    result.textContent = `Pecahan 1 (${f1.numerator}/${f1.denominator}) lebih kecil dari Pecahan 2 (${f2.numerator}/${f2.denominator})`;
+                    result.classList.add('less');
+                } else {
+                    result.textContent = `Kedua pecahan sama besar (${f1.numerator}/${f1.denominator} = ${f2.numerator}/${f2.denominator})`;
+                    result.classList.add('equal');
+                }
+                result.classList.add('show');
+            }, 100);
+        }
+
+        // Event listeners
+        numerator1.addEventListener('input', (e) => {
+            fractions[1].numerator = parseInt(e.target.value);
+            if (fractions[1].numerator > fractions[1].denominator) {
+                fractions[1].numerator = fractions[1].denominator;
+                e.target.value = fractions[1].numerator;
+            }
+            updateFraction(1);
+        });
+
+        denominator1.addEventListener('input', (e) => {
+            fractions[1].denominator = parseInt(e.target.value);
+            if (fractions[1].numerator > fractions[1].denominator) {
+                fractions[1].numerator = fractions[1].denominator;
+                numerator1.value = fractions[1].numerator;
+            }
+            updateFraction(1);
+        });
+
+        numerator2.addEventListener('input', (e) => {
+            fractions[2].numerator = parseInt(e.target.value);
+            if (fractions[2].numerator > fractions[2].denominator) {
+                fractions[2].numerator = fractions[2].denominator;
+                e.target.value = fractions[2].numerator;
+            }
+            updateFraction(2);
+        });
+
+        denominator2.addEventListener('input', (e) => {
+            fractions[2].denominator = parseInt(e.target.value);
+            if (fractions[2].numerator > fractions[2].denominator) {
+                fractions[2].numerator = fractions[2].denominator;
+                numerator2.value = fractions[2].numerator;
+            }
+            updateFraction(2);
+        });
+
+        // Shape selector
+        document.querySelectorAll('.shape-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const fractionNum = parseInt(btn.dataset.fraction);
+                const shape = btn.dataset.shape;
+                
+                // Update active button
+                document.querySelectorAll(`.shape-btn[data-fraction="${fractionNum}"]`).forEach(b => {
+                    b.classList.remove('active');
+                });
+                btn.classList.add('active');
+                
+                // Update shape and redraw
+                fractions[fractionNum].shape = shape;
+                updateFraction(fractionNum);
+            });
+        });
+
+        compareBtn.addEventListener('click', compareFractions);
+
+        // Initialize
+        updateFraction(1);
+        updateFraction(2);
+    </script>
+</body>
+</html>
